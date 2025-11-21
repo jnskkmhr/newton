@@ -43,3 +43,9 @@ asv/html
 MUJOCO_LOG.TXT
 imgui.ini
 newton/tests/outputs/
+
+
+*.pch
+
+!newton/examples/assets/*/*.usd
+!newton/examples/assets/*/*/*.usd
