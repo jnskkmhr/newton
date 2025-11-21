@@ -355,24 +355,24 @@ class NewtonEnv:
         builder.default_shape_cfg.kf = 1.0e3
         builder.default_shape_cfg.mu = 0.75
 
-        asset_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd"
-        # asset_path = "newton/examples/assets/g1_29dof/g1.usd" # TODO: inertia eigen value error
+        # asset_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd"
+        # asset_path = "newton/examples/assets/g1_29dof/g1.usd" # BUG: inertia eigen value error
         builder.add_usd(
-            asset_path, # TODO: resolve hardcoding later 
+            source=self.config["asset_path"], 
             xform=wp.transform(wp.vec3(0, 0, 0.8)),
             collapse_fixed_joints=False,
             enable_self_collisions=False,
             joint_ordering="dfs",
             hide_collision_shapes=True,
         )
-        builder.approximate_meshes("convex_hull")
+        # builder.approximate_meshes("convex_hull")
         # builder.approximate_meshes("bounding_box")
 
         # add ground
         builder.add_ground_plane()
         
         # -- set initial pose
-        builder.joint_q[:3] = [0.0, -2.0, 0.8]
+        builder.joint_q[:3] = [0.0, 0.0, 0.8]
         builder.joint_q[3:7] = [0.0, 0.0, 0.7071, 0.7071]
         builder.joint_q[7:] = config["mjw_joint_pos"]
 
@@ -388,8 +388,8 @@ class NewtonEnv:
         particles_per_cell = 3.0
         voxel_size = 0.03
         density = 3000.0
-        particle_lo = np.array([-1.0, -0.5, 0.0])  # emission lower bound
-        particle_hi = np.array([1.0, 2.5, 0.15])  # emission upper bound
+        particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
+        particle_hi = np.array([0.5, 2.5, 0.15])  # emission upper bound
         particle_res = np.array(
             np.ceil(particles_per_cell * (particle_hi - particle_lo) / voxel_size),
             dtype=int,
@@ -690,10 +690,8 @@ class NewtonEnv:
     def load_policy_and_setup_tensors(self):
         """Load policy and setup initial tensors for robot control.
         """
-        # TODO: resolve hardcoding later
-        policy_path = "newton/examples/assets/g1_29dof_rev_1_0/policy.pt"
-        print("[INFO] Loading policy from:", policy_path)
-        self.policy = torch.jit.load(policy_path, map_location=self.torch_device)
+        print("[INFO] Loading policy from:", self.config["policy_path"])
+        self.policy = torch.jit.load(self.config["policy_path"], map_location=self.torch_device)
 
         # Handle potential None state
         joint_q = self.state_0.joint_q if self.state_0.joint_q is not None else []
@@ -720,8 +718,7 @@ if __name__ == "__main__":
     viewer, args = newton.examples.init(parser)
 
     # Load robot configuration from YAML file in the downloaded assets
-    # TODO: resolve hardcoding later 
-    policy_path = "newton/examples/assets/g1_29dof_rev_1_0/policy.pt"
+    # TODO: resolve hardcoding later
     yaml_file_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof.yaml"
     try:
         with open(yaml_file_path, encoding="utf-8") as f:
@@ -738,7 +735,8 @@ if __name__ == "__main__":
     mjc_to_physx = list(range(config["num_dofs"]))
     physx_to_mjc = list(range(config["num_dofs"]))
 
-    if args.physx:
+    # if args.physx:
+    if "physx_joint_names" in config.keys():
         # when importing policy trained in IsaacLab
         mjc_to_physx, physx_to_mjc = find_physx_mjwarp_mapping(config["mjw_joint_names"], config["physx_joint_names"])
         print(f"[INFO] Using PhysX policy with mapping: mjc_to_physx={mjc_to_physx}, physx_to_mjc={physx_to_mjc}")
@@ -746,7 +744,7 @@ if __name__ == "__main__":
     env = NewtonEnv(viewer, config, mjc_to_physx, physx_to_mjc)
 
     # Use utility function to load policy and setup tensors
-    # load_policy_and_setup_tensors(env, policy_path, config["num_dofs"], slice(7, None))
+    # load_policy_and_setup_tensors(env, config["policy_path"], config["num_dofs"], slice(7, None))
 
     # Run using standard example loop
     newton.examples.run(env, args)
