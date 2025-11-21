@@ -22,12 +22,8 @@
 # Press "p" to reset the robot.
 # Press "i", "j", "k", "l", "u", "o" to move the robot.
 # Run this example with:
-# python -m newton.examples robot_policy --robot g1_29dof
-# python -m newton.examples robot_policy --robot g1_23dof
-# python -m newton.examples robot_policy --robot go2
-# python -m newton.examples robot_policy --robot anymal
-# python -m newton.examples robot_policy --robot anymal --physx
-# to run the example with a PhysX-trained policy run with --physx
+# uv run newton/examples/mpm/example_mpm_robot.py 
+# uv run newton/examples/mpm/example_mpm_robot.py --viewer usd --output-path **.usd
 ###########################################################################
 
 from dataclasses import dataclass
@@ -346,57 +342,25 @@ class NewtonEnv:
         builder = newton.ModelBuilder(up_axis=newton.Axis.Z)
         newton.solvers.SolverMuJoCo.register_custom_attributes(builder)
         builder.default_joint_cfg = newton.ModelBuilder.JointDofConfig(
-            armature=0.01,
-            limit_ke=0,
-            limit_kd=0,
+            armature=0.06,
+            limit_ke=1.0e3,
+            limit_kd=1.0e1,
         )
         builder.default_shape_cfg.ke = 5.0e4
         builder.default_shape_cfg.kd = 5.0e2
         builder.default_shape_cfg.kf = 1.0e3
         builder.default_shape_cfg.mu = 0.75
 
-        # asset_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd"
-        # asset_path = "newton/examples/assets/g1_29dof/g1.usd" # BUG: inertia eigen value error
-        builder.add_usd(
-            source=self.config["asset_path"], 
-            xform=wp.transform(wp.vec3(0, 0, 0.8)),
-            collapse_fixed_joints=False,
-            enable_self_collisions=False,
-            joint_ordering="dfs",
-            hide_collision_shapes=True,
-        )
-        # builder.approximate_meshes("convex_hull")
-        # builder.approximate_meshes("bounding_box")
+        # add robot
+        self.add_robot(builder)
 
         # add ground
         builder.add_ground_plane()
-        
-        # -- set initial pose
-        builder.joint_q[:3] = [0.0, 0.0, 0.8]
-        builder.joint_q[3:7] = [0.0, 0.0, 0.7071, 0.7071]
-        builder.joint_q[7:] = config["mjw_joint_pos"]
-
-        # -- set joint gains
-        for i in range(len(config["mjw_joint_stiffness"])):
-            builder.joint_target_ke[i + 6] = config["mjw_joint_stiffness"][i]
-            builder.joint_target_kd[i + 6] = config["mjw_joint_damping"][i]
-            builder.joint_armature[i + 6] = config["mjw_joint_armature"][i]
 
         # -- add sand particles
-        tolerance=1.0e-6
-        grid_type = 'sparse'
-        particles_per_cell = 3.0
-        voxel_size = 0.03
-        density = 3000.0
-        particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
-        particle_hi = np.array([0.5, 2.5, 0.15])  # emission upper bound
-        particle_res = np.array(
-            np.ceil(particles_per_cell * (particle_hi - particle_lo) / voxel_size),
-            dtype=int,
-        )
-        _spawn_particles(builder, particle_res, particle_lo, particle_hi, density)
-        
+        self.add_sand(builder)
 
+        # finalize model
         self.model = builder.finalize()
         self.model.set_gravity((0.0, 0.0, -9.81))
         self.model.particle_mu = 0.48
@@ -404,6 +368,9 @@ class NewtonEnv:
 
         # set up mpm solver
         mpm_options = SolverImplicitMPM.Options()
+        tolerance=1.0e-6
+        grid_type = 'sparse'
+        voxel_size = 0.03
         mpm_options.voxel_size = voxel_size
         mpm_options.tolerance = tolerance
         mpm_options.transfer_scheme = "pic"
@@ -414,9 +381,21 @@ class NewtonEnv:
 
         mpm_options.strain_basis = "P0"
         mpm_options.max_iterations = 50
-        mpm_options.hardening = 0.0
-        mpm_options.critical_fraction = 0.0
         mpm_options.air_drag = 1.0
+
+        # # plasticity 
+        # mpm_options.yield_pressure = 0.0
+        # mpm_options.tensile_yield_ratio = 0.0
+        # mpm_options.yield_pressure = 1e4 
+        # mpm_options.hardening = 0.5
+        # mpm_options.critical_fraction = 0.0
+
+        # # elasticity
+        # mpm_options.young_modulus = 2.0e6
+        # mpm_options.poisson_ratio = 0.3 
+        # mpm_options.damping = 0.0
+
+
 
         mpm_model = SolverImplicitMPM.Model(self.model, mpm_options)
 
@@ -466,13 +445,6 @@ class NewtonEnv:
         self.command = torch.zeros((1, 3), device=self.torch_device, dtype=torch.float32)
         self._reset_key_prev = False
 
-        # Initialize policy-related attributes
-        # (will be set by load_policy_and_setup_tensors)
-        # self.policy = None
-        # self.joint_pos_initial = None
-        # self.act = None
-        # self.rearranged_act = None
-
         # create observation buffer
         self.create_obs_buffer()
 
@@ -485,6 +457,74 @@ class NewtonEnv:
     """
     initializations
     """
+
+    def add_robot(self, builder: newton.ModelBuilder):
+        # asset_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd"
+        # asset_path = "newton/examples/assets/g1_29dof/g1.usd" # BUG: inertia eigen value error
+
+        builder.add_usd(
+            source=self.config["asset_path"], 
+            xform=wp.transform(wp.vec3(0, 0, 0.8)),
+            collapse_fixed_joints=False,
+            enable_self_collisions=False,
+            joint_ordering="dfs",
+            hide_collision_shapes=True,
+        )
+
+        # builder.add_urdf(
+        #     source=self.config["asset_path"],
+        #     xform=wp.transform(wp.vec3(0.0, 0.0, 0.8)),
+        #     floating=True,
+        #     enable_self_collisions=False,
+        #     collapse_fixed_joints=True,
+        #     ignore_inertial_definitions=False,
+        # )
+        
+        # builder.approximate_meshes("convex_hull")
+        # builder.approximate_meshes("bounding_box")
+        
+        # -- set initial pose
+        builder.joint_q[:3] = [0.0, -1.0, 0.8]
+        builder.joint_q[3:7] = [0.0, 0.0, 0.7071, 0.7071]
+        builder.joint_q[7:] = self.config["mjw_joint_pos"]
+
+        # -- set joint gains
+        for i in range(len(self.config["mjw_joint_stiffness"])):
+            builder.joint_target_ke[i + 6] = self.config["mjw_joint_stiffness"][i]
+            builder.joint_target_kd[i + 6] = self.config["mjw_joint_damping"][i]
+            builder.joint_armature[i + 6] = self.config["mjw_joint_armature"][i]
+
+    
+    def add_sand(self, sand_builder: newton.ModelBuilder):
+        particles_per_cell = 3.0
+        voxel_size = 0.03
+        density = 2500.0 # bulk density kg/m3
+        particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
+        particle_hi = np.array([0.5, 2.5, 0.15])  # emission upper bound
+        particle_res = np.array(
+            np.ceil(particles_per_cell * (particle_hi - particle_lo) / voxel_size),
+            dtype=int,
+        )
+
+        cell_size = (particle_hi - particle_lo) / particle_res
+        cell_volume = np.prod(cell_size)
+        radius = np.max(cell_size) * 0.5
+        mass = np.prod(cell_volume) * density
+
+        sand_builder.add_particle_grid(
+            pos=wp.vec3(particle_lo),
+            rot=wp.quat_identity(),
+            vel=wp.vec3(0.0),
+            dim_x=particle_res[0] + 1,
+            dim_y=particle_res[1] + 1,
+            dim_z=particle_res[2] + 1,
+            cell_x=cell_size[0],
+            cell_y=cell_size[1],
+            cell_z=cell_size[2],
+            mass=mass,
+            jitter=2.0 * radius,
+            radius_mean=radius,
+        )
 
     def capture(self):
         """Put graph capture into it's own method."""
@@ -625,7 +665,7 @@ class NewtonEnv:
         """
         # Build command from viewer keyboard
         if hasattr(self.viewer, "is_key_down"):
-            fwd = 1.0 if self.viewer.is_key_down("i") else (-1.0 if self.viewer.is_key_down("k") else 0.0)
+            fwd = 1.0 if self.viewer.is_key_down("i") else (-1.0 if self.viewer.is_key_down("k") else 0.5)
             lat = 0.5 if self.viewer.is_key_down("j") else (-0.5 if self.viewer.is_key_down("l") else 0.0)
             rot = 1.0 if self.viewer.is_key_down("u") else (-1.0 if self.viewer.is_key_down("o") else 0.0)
             self.command[0, 0] = float(fwd)
@@ -712,14 +752,16 @@ if __name__ == "__main__":
     # Create parser that inherits common arguments and adds
     # example-specific ones
     parser = newton.examples.create_parser()
-    parser.add_argument("--physx", action="store_true", help="Run physX policy instead of MJWarp.")
+    # parser.add_argument("--physx", action="store_true", help="Run physX policy instead of MJWarp.")
 
     # Parse arguments and initialize viewer
     viewer, args = newton.examples.init(parser)
+    # viewer = newton.viewer.ViewerFile('humanoid_recording.mp4', auto_save=False)
 
     # Load robot configuration from YAML file in the downloaded assets
     # TODO: resolve hardcoding later
     yaml_file_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof.yaml"
+    # yaml_file_path = "newton/examples/assets/g1/g1_29dof.yaml"
     try:
         with open(yaml_file_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -739,7 +781,7 @@ if __name__ == "__main__":
     if "physx_joint_names" in config.keys():
         # when importing policy trained in IsaacLab
         mjc_to_physx, physx_to_mjc = find_physx_mjwarp_mapping(config["mjw_joint_names"], config["physx_joint_names"])
-        print(f"[INFO] Using PhysX policy with mapping: mjc_to_physx={mjc_to_physx}, physx_to_mjc={physx_to_mjc}")
+        # print(f"[INFO] Using PhysX policy with mapping: mjc_to_physx={mjc_to_physx}, physx_to_mjc={physx_to_mjc}")
 
     env = NewtonEnv(viewer, config, mjc_to_physx, physx_to_mjc)
 
@@ -747,4 +789,16 @@ if __name__ == "__main__":
     # load_policy_and_setup_tensors(env, config["policy_path"], config["num_dofs"], slice(7, None))
 
     # Run using standard example loop
-    newton.examples.run(env, args)
+    # newton.examples.run(env, args)
+
+
+    total_sim_time = 4.0  # seconds
+    while env.sim_time < total_sim_time:
+        if not env.viewer.is_paused():
+            with wp.ScopedTimer("step", active=False):
+                env.step()
+
+        with wp.ScopedTimer("render", active=False):
+            env.render()
+    print("[INFO] Simulation completed")
+    env.viewer.close()

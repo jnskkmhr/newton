@@ -149,6 +149,18 @@ class Example:
         mpm_options.critical_fraction = 0.0
         mpm_options.air_drag = 1.0
 
+        # plasticity 
+        mpm_options.yield_pressure = 0.0
+        mpm_options.tensile_yield_ratio = 0.0
+        mpm_options.yield_pressure = 1e4 
+        mpm_options.hardening = 0.05
+        mpm_options.critical_fraction = 0.0
+
+        # elasticity
+        mpm_options.young_modulus = 2.0e6
+        mpm_options.poisson_ratio = 0.3 
+        mpm_options.damping = 0.0
+
         mpm_model = SolverImplicitMPM.Model(self.model, mpm_options)
 
         # Select and merge meshes for robot/sand collisions
