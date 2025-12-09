@@ -383,8 +383,17 @@ class NewtonEnv:
 
         # Set model in viewer
         self.viewer.set_model(self.model)
-        self.viewer.show_particles = True
+        # self.viewer.show_particles = True
         self.viewer.vsync = True
+
+        self.follow_cam = True
+        if isinstance(self.viewer, newton.viewer.ViewerGL):
+            def toggle_follow_cam(imgui):
+                changed, follow_cam = imgui.checkbox("Follow Camera", self.follow_cam)
+                if changed:
+                    self.follow_cam = follow_cam
+
+            self.viewer.register_ui_callback(toggle_follow_cam, position="side")
 
         # Ensure FK evaluation (for non-MuJoCo solvers)
         newton.eval_fk(self.model, self.state_0.joint_q, self.state_0.joint_qd, self.state_0)
@@ -555,17 +564,19 @@ class NewtonEnv:
 
         self.base_ang_vel = quat_rotate_inverse(root_quat_w, root_ang_vel_w)
         self.projected_gravity = quat_rotate_inverse(root_quat_w, self.gravity_vec)
-        # # G1
-        # self.joint_pos = torch.index_select(joint_pos_current - self.joint_pos_initial, 1, self.physx_to_mjc_indices)
-        # T1
-        self.joint_pos = torch.index_select(joint_pos_current, 1, self.physx_to_mjc_indices)
+        
+        # TODO: later unify joint pos to rel_joint_pos for t1
+        if self.config["robot"] == "g1":
+            self.joint_pos = torch.index_select(joint_pos_current - self.joint_pos_initial, 1, self.physx_to_mjc_indices)
+        elif self.config["robot"] == "t1":
+            self.joint_pos = torch.index_select(joint_pos_current, 1, self.physx_to_mjc_indices)
 
         self.joint_vel = torch.index_select(joint_vel_current, 1, self.physx_to_mjc_indices)
         self.velocity_command = self.command
         self.last_actions = self.act
         
         # add to history buffer
-        self.group_obs_term_hisotry_buffer["clock"].append(self.clock)
+        # self.group_obs_term_hisotry_buffer["clock"].append(self.clock)
         self.group_obs_term_hisotry_buffer["base_ang_vel"].append(self.base_ang_vel)
         self.group_obs_term_hisotry_buffer["projected_gravity"].append(self.projected_gravity)
         self.group_obs_term_hisotry_buffer["velocity_command"].append(self.velocity_command)
@@ -574,7 +585,7 @@ class NewtonEnv:
         self.group_obs_term_hisotry_buffer["last_actions"].append(self.last_actions)
         
         self.obs = torch.cat([
-            self.group_obs_term_hisotry_buffer["clock"].buffer.reshape(1, -1), # (1, history_length * 2)
+            # self.group_obs_term_hisotry_buffer["clock"].buffer.reshape(1, -1), # (1, history_length * 2)
             self.group_obs_term_hisotry_buffer["base_ang_vel"].buffer.reshape(1, -1), # (1, history_length * 3)
             self.group_obs_term_hisotry_buffer["projected_gravity"].buffer.reshape(1, -1), # (1, history_length * 3)
             self.group_obs_term_hisotry_buffer["velocity_command"].buffer.reshape(1, -1), # (1, history_length * 3)
@@ -612,12 +623,22 @@ class NewtonEnv:
         """
         # Build command from viewer keyboard
         if hasattr(self.viewer, "is_key_down"):
-            fwd = 1.0 if self.viewer.is_key_down("i") else (-1.0 if self.viewer.is_key_down("k") else 0.0)
-            lat = 0.5 if self.viewer.is_key_down("j") else (-0.5 if self.viewer.is_key_down("l") else 0.0)
-            rot = 1.0 if self.viewer.is_key_down("u") else (-1.0 if self.viewer.is_key_down("o") else 0.0)
-            self.command[0, 0] = float(fwd)
-            self.command[0, 1] = float(lat)
-            self.command[0, 2] = float(rot)
+            # fwd = 1.0 if self.viewer.is_key_down("i") else (-1.0 if self.viewer.is_key_down("k") else 0.0)
+            # lat = 0.5 if self.viewer.is_key_down("j") else (-0.5 if self.viewer.is_key_down("l") else 0.0)
+            # rot = 1.0 if self.viewer.is_key_down("u") else (-1.0 if self.viewer.is_key_down("o") else 0.0)
+            fwd = 0.1 if self.viewer.is_key_down("i") else (-0.1 if self.viewer.is_key_down("k") else 0.0)
+            lat = 0.05 if self.viewer.is_key_down("j") else (-0.05 if self.viewer.is_key_down("l") else 0.0)
+            rot = 0.1 if self.viewer.is_key_down("u") else (-0.1 if self.viewer.is_key_down("o") else 0.0)
+            self.command[0, 0] += float(fwd)
+            self.command[0, 1] += float(lat)
+            self.command[0, 2] += float(rot)
+            # clip 
+            self.command[:, 0].clamp_(min=-1.0, max=3.0)
+            self.command[:, 1].clamp_(min=-0.5, max=0.5)
+            self.command[:, 2].clamp_(min=-1.0, max=1.0)
+            if self.viewer.is_key_down("z"):
+                self.command *= 0.0
+            print(f"[INFO] Command: fwd={self.command[0,0]:.2f}, lat={self.command[0,1]:.2f}, rot={self.command[0,2]:.2f}")
             # Reset when 'P' is pressed (edge-triggered)
             reset_down = bool(self.viewer.is_key_down("p"))
             if reset_down and not self._reset_key_prev:
@@ -657,6 +678,10 @@ class NewtonEnv:
         newton.eval_fk(self.model, self.state_1.joint_q, self.state_1.joint_qd, self.state_1)
 
     def render(self):
+        if self.follow_cam:
+            self.viewer.set_camera(
+                pos=wp.vec3(*self.state_0.joint_q.numpy()[:3]) + wp.vec3(5.0, 0.0, 1.0), pitch=0.0, yaw=-180.0
+            )
         self.viewer.begin_frame(self.sim_time)
         self.viewer.log_state(self.state_0)
         self.viewer.log_contacts(self.contacts, self.state_0)
