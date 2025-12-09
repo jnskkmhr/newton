@@ -26,6 +26,7 @@
 # uv run newton/examples/mpm/example_mpm_robot.py --viewer usd --output-path **.usd
 ###########################################################################
 
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -323,9 +324,10 @@ class NewtonEnv:
         self.sim_step = 0
         self.sim_substeps = 1
         self.sim_dt = self.frame_dt / self.sim_substeps
+        self.gait_period = config.get("gait_period", 0.4)
         
         # obs history length
-        self.history_length = 10 
+        self.history_length = config.get("history_length", 10)
 
         # Save a reference to the viewer
         self.viewer = viewer
@@ -357,52 +359,9 @@ class NewtonEnv:
         # add ground
         builder.add_ground_plane()
 
-        # -- add sand particles
-        self.add_sand(builder)
-
         # finalize model
         self.model = builder.finalize()
         self.model.set_gravity((0.0, 0.0, -9.81))
-        self.model.particle_mu = 0.48
-        self.model.particle_ke = 1.0e15
-
-        # set up mpm solver
-        mpm_options = SolverImplicitMPM.Options()
-        tolerance=1.0e-6
-        grid_type = 'sparse'
-        voxel_size = 0.03
-        mpm_options.voxel_size = voxel_size
-        mpm_options.tolerance = tolerance
-        mpm_options.transfer_scheme = "pic"
-        mpm_options.grid_type = grid_type
-
-        mpm_options.grid_padding = 50 if grid_type == "fixed" else 0
-        mpm_options.max_active_cell_count = 1 << 15 if grid_type == "fixed" else -1
-
-        mpm_options.strain_basis = "P0"
-        mpm_options.max_iterations = 50
-        mpm_options.air_drag = 1.0
-
-        # # plasticity 
-        # mpm_options.yield_pressure = 0.0
-        # mpm_options.tensile_yield_ratio = 0.0
-        # mpm_options.yield_pressure = 1e4 
-        # mpm_options.hardening = 0.5
-        # mpm_options.critical_fraction = 0.0
-
-        # # elasticity
-        # mpm_options.young_modulus = 2.0e6
-        # mpm_options.poisson_ratio = 0.3 
-        # mpm_options.damping = 0.0
-
-
-
-        mpm_model = SolverImplicitMPM.Model(self.model, mpm_options)
-
-        # Select and merge meshes for robot/sand collisions
-        mpm_model.setup_collider(
-            body_mass=wp.zeros_like(self.model.body_mass),  # so that the robot bodies are considered as kinematic
-        )
 
         # -- set rigid body solver
         self.solver = newton.solvers.SolverMuJoCo(
@@ -412,15 +371,11 @@ class NewtonEnv:
             nconmax=30,
             njmax=100,
         )
-        # -- set mpm solver
-        self.mpm_solver = SolverImplicitMPM(mpm_model, mpm_options)
 
         # Initialize state objects
         self.state_temp = self.model.state()
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
-        self.mpm_solver.enrich_state(self.state_0)
-        self.mpm_solver.enrich_state(self.state_1)
 
         # set up control policy
         self.control = self.model.control()
@@ -464,7 +419,7 @@ class NewtonEnv:
 
         builder.add_usd(
             source=self.config["asset_path"], 
-            xform=wp.transform(wp.vec3(0, 0, 0.8)),
+            xform=wp.transform(wp.vec3(*self.config["mjw_init_pos"])),
             collapse_fixed_joints=False,
             enable_self_collisions=False,
             joint_ordering="dfs",
@@ -484,7 +439,7 @@ class NewtonEnv:
         # builder.approximate_meshes("bounding_box")
         
         # -- set initial pose
-        builder.joint_q[:3] = [0.0, -1.0, 0.8]
+        builder.joint_q[:3] = self.config["mjw_init_pos"]
         builder.joint_q[3:7] = [0.0, 0.0, 0.7071, 0.7071]
         builder.joint_q[7:] = self.config["mjw_joint_pos"]
 
@@ -494,39 +449,6 @@ class NewtonEnv:
             builder.joint_target_kd[i + 6] = self.config["mjw_joint_damping"][i]
             builder.joint_armature[i + 6] = self.config["mjw_joint_armature"][i]
 
-    
-    def add_sand(self, sand_builder: newton.ModelBuilder):
-        particles_per_cell = 3.0
-        voxel_size = 0.03
-        density = 2500.0 # bulk density kg/m3
-        # particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
-        # particle_hi = np.array([0.5, 2.5, 0.15])  # emission upper bound
-        particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
-        particle_hi = np.array([0.5, 0.5, 0.3])  # emission upper bound
-        particle_res = np.array(
-            np.ceil(particles_per_cell * (particle_hi - particle_lo) / voxel_size),
-            dtype=int,
-        )
-
-        cell_size = (particle_hi - particle_lo) / particle_res
-        cell_volume = np.prod(cell_size)
-        radius = np.max(cell_size) * 0.5
-        mass = np.prod(cell_volume) * density
-
-        sand_builder.add_particle_grid(
-            pos=wp.vec3(particle_lo),
-            rot=wp.quat_identity(),
-            vel=wp.vec3(0.0),
-            dim_x=particle_res[0] + 1,
-            dim_y=particle_res[1] + 1,
-            dim_z=particle_res[2] + 1,
-            cell_x=cell_size[0],
-            cell_y=cell_size[1],
-            cell_z=cell_size[2],
-            mass=mass,
-            jitter=2.0 * radius,
-            radius_mean=radius,
-        )
 
     def capture(self):
         """Put graph capture into it's own method."""
@@ -541,20 +463,19 @@ class NewtonEnv:
                 self.simulate_robot()
             self.graph = capture.graph
 
-        self.sand_graph = None
-        if wp.get_device().is_cuda and self.mpm_solver.grid_type == "fixed":
-            with wp.ScopedCapture() as capture:
-                self.simulate_sand()
-            self.sand_graph = capture.graph
-
     def create_obs_buffer(self):
+        self.phase_time = torch.zeros((1), device=self.torch_device, dtype=torch.float32)
+        self.clock = torch.zeros((1, 2), device=self.torch_device, dtype=torch.float32)
         self.base_ang_vel = torch.zeros((1, 3), device=self.torch_device, dtype=torch.float32)
         self.projected_gravity = torch.zeros((1, 3), device=self.torch_device, dtype=torch.float32)
         self.velocity_command = torch.zeros((1, 3), device=self.torch_device, dtype=torch.float32)
         self.joint_pos = torch.zeros((1, self.config["num_dofs"]), device=self.torch_device, dtype=torch.float32)
         self.joint_vel = torch.zeros((1, self.config["num_dofs"]), device=self.torch_device, dtype=torch.float32)
-        self.last_actions = torch.zeros((1, self.config["num_dofs"]), device=self.torch_device, dtype=torch.float32)
+        # self.last_actions = torch.zeros((1, self.config["num_dofs"]), device=self.torch_device, dtype=torch.float32)
+        self.last_actions = torch.zeros((1, self.config["num_policy_dofs"]), device=self.torch_device, dtype=torch.float32)
+
         self.group_obs_term_hisotry_buffer = {
+            "clock": CircularBuffer(self.history_length, 1, self.torch_device),
             "base_ang_vel": CircularBuffer(self.history_length, 1, self.torch_device),
             "projected_gravity": CircularBuffer(self.history_length, 1, self.torch_device),
             "velocity_command": CircularBuffer(self.history_length, 1, self.torch_device),
@@ -563,8 +484,13 @@ class NewtonEnv:
             "last_actions": CircularBuffer(self.history_length, 1, self.torch_device),
         }
         obs_dim = self.history_length * (
-            self.base_ang_vel.shape[1] + self.projected_gravity.shape[1] + self.velocity_command.shape[1] + \
-                self.joint_pos.shape[1] + self.joint_vel.shape[1] + self.last_actions.shape[1])
+            self.clock.shape[1] +
+            self.base_ang_vel.shape[1] + 
+            self.projected_gravity.shape[1] + 
+            self.velocity_command.shape[1] +
+            self.joint_pos.shape[1] + 
+            self.joint_vel.shape[1] + 
+            self.last_actions.shape[1])
         self.obs = torch.zeros(1, obs_dim, device=self.torch_device, dtype=torch.float32)
 
 
@@ -600,13 +526,16 @@ class NewtonEnv:
                         state_0_dict[key].assign(state_1_dict[key])
                         state_1_dict[key].assign(state_temp_dict[key])
 
-    def simulate_sand(self):
-        # sand step (in-place on frame dt)
-        self.mpm_solver.step(self.state_0, self.state_0, contacts=None, control=None, dt=self.frame_dt)
-
     """
     mdp
     """
+
+    def _get_obs_phase_time(self):
+        """Calculate phase time for gait."""
+        cur_time = time.perf_counter()
+        phase_time = cur_time % self.gait_period / self.gait_period
+        self.phase_time[:] = phase_time
+        return self.phase_time
     
     def compute_obs(self):
         # Extract state information with proper handling
@@ -620,14 +549,23 @@ class NewtonEnv:
         joint_pos_current = torch.tensor(joint_q[7:], device=self.torch_device, dtype=torch.float32).unsqueeze(0)
         joint_vel_current = torch.tensor(joint_qd[6:], device=self.torch_device, dtype=torch.float32).unsqueeze(0)
 
+        phase = self._get_obs_phase_time()
+        self.clock[:, 0] = torch.sin(2.0 * np.pi * phase)
+        self.clock[:, 1] = torch.cos(2.0 * np.pi * phase)
+
         self.base_ang_vel = quat_rotate_inverse(root_quat_w, root_ang_vel_w)
         self.projected_gravity = quat_rotate_inverse(root_quat_w, self.gravity_vec)
-        self.joint_pos = torch.index_select(joint_pos_current - self.joint_pos_initial, 1, self.physx_to_mjc_indices)
+        # # G1
+        # self.joint_pos = torch.index_select(joint_pos_current - self.joint_pos_initial, 1, self.physx_to_mjc_indices)
+        # T1
+        self.joint_pos = torch.index_select(joint_pos_current, 1, self.physx_to_mjc_indices)
+
         self.joint_vel = torch.index_select(joint_vel_current, 1, self.physx_to_mjc_indices)
         self.velocity_command = self.command
         self.last_actions = self.act
         
         # add to history buffer
+        self.group_obs_term_hisotry_buffer["clock"].append(self.clock)
         self.group_obs_term_hisotry_buffer["base_ang_vel"].append(self.base_ang_vel)
         self.group_obs_term_hisotry_buffer["projected_gravity"].append(self.projected_gravity)
         self.group_obs_term_hisotry_buffer["velocity_command"].append(self.velocity_command)
@@ -636,6 +574,7 @@ class NewtonEnv:
         self.group_obs_term_hisotry_buffer["last_actions"].append(self.last_actions)
         
         self.obs = torch.cat([
+            self.group_obs_term_hisotry_buffer["clock"].buffer.reshape(1, -1), # (1, history_length * 2)
             self.group_obs_term_hisotry_buffer["base_ang_vel"].buffer.reshape(1, -1), # (1, history_length * 3)
             self.group_obs_term_hisotry_buffer["projected_gravity"].buffer.reshape(1, -1), # (1, history_length * 3)
             self.group_obs_term_hisotry_buffer["velocity_command"].buffer.reshape(1, -1), # (1, history_length * 3)
@@ -648,15 +587,21 @@ class NewtonEnv:
     def apply_control(self):
         self.compute_obs()
         with torch.no_grad():
+            # pass
             self.act = self.policy(self.obs)
-            self.rearranged_act = torch.index_select(self.act, 1, self.mjc_to_physx_indices) 
+            # add upper body dof zeros if needed
+            if self.act.shape[1] != self.config["num_dofs"]:
+                act = torch.cat([
+                    torch.zeros(1, self.config["num_dofs"] - self.act.shape[1], device=self.torch_device, dtype=torch.float32), 
+                    self.act], dim=1)
+                self.rearranged_act = torch.index_select(act, 1, self.mjc_to_physx_indices)
+            else:
+                self.rearranged_act = torch.index_select(self.act, 1, self.mjc_to_physx_indices)
             a = self.joint_pos_initial + self.config["action_scale"] * self.rearranged_act
             # add extra base dof zeros
             a_with_zeros = torch.cat([torch.zeros(6, device=self.torch_device, dtype=torch.float32), a.squeeze(0)])
             a_wp = wp.from_torch(a_with_zeros, dtype=wp.float32, requires_grad=False)
             wp.copy(self.control.joint_target_pos, a_wp)
-            # v_wp = wp.from_torch(torch.zeros_like(a_with_zeros), dtype=wp.float32, requires_grad=False)
-            # wp.copy(self.control.joint_target_vel, v_wp)
 
     """
     step
@@ -692,14 +637,6 @@ class NewtonEnv:
                 wp.capture_launch(self.graph)
             else:
                 self.simulate_robot()
-
-        """
-        step sand physics
-        """
-        if self.sand_graph:
-            wp.capture_launch(self.sand_graph)
-        else:
-            self.simulate_sand()
         
 
         self.sim_time += self.frame_dt
@@ -738,7 +675,7 @@ class NewtonEnv:
         # Handle potential None state
         joint_q = self.state_0.joint_q if self.state_0.joint_q is not None else []
         self.joint_pos_initial = torch.tensor(joint_q[7:], device=self.torch_device, dtype=torch.float32).unsqueeze(0)
-        self.act = torch.zeros(1, self.config["num_dofs"], device=self.torch_device, dtype=torch.float32)
+        self.act = torch.zeros(1, self.config["num_policy_dofs"], device=self.torch_device, dtype=torch.float32)
         self.rearranged_act = torch.zeros(1, self.config["num_dofs"], device=self.torch_device, dtype=torch.float32)
 
     def test(self):
@@ -754,16 +691,17 @@ if __name__ == "__main__":
     # Create parser that inherits common arguments and adds
     # example-specific ones
     parser = newton.examples.create_parser()
-    # parser.add_argument("--physx", action="store_true", help="Run physX policy instead of MJWarp.")
+    parser.add_argument("--config", type=str, 
+                        default="newton/examples/assets/g1_29dof_rev_1_0/g1_29dof.yaml", # G1
+                        # default="newton/examples/assets/t1_29dof/t1_29dof.yaml", # T1
+                        help="Path to robot config YAML file.")
 
     # Parse arguments and initialize viewer
     viewer, args = newton.examples.init(parser)
     # viewer = newton.viewer.ViewerFile('humanoid_recording.mp4', auto_save=False)
 
     # Load robot configuration from YAML file in the downloaded assets
-    # TODO: resolve hardcoding later
-    yaml_file_path = "newton/examples/assets/g1_29dof_rev_1_0/g1_29dof.yaml"
-    # yaml_file_path = "newton/examples/assets/g1/g1_29dof.yaml"
+    yaml_file_path = args.config
     try:
         with open(yaml_file_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -787,13 +725,7 @@ if __name__ == "__main__":
 
     env = NewtonEnv(viewer, config, mjc_to_physx, physx_to_mjc)
 
-    # Use utility function to load policy and setup tensors
-    # load_policy_and_setup_tensors(env, config["policy_path"], config["num_dofs"], slice(7, None))
-
-    # Run using standard example loop
-    # newton.examples.run(env, args)
-
-
+    # Main simulation loop
     total_sim_time = 20.0  # seconds
     while env.sim_time < total_sim_time:
         if not env.viewer.is_paused():
