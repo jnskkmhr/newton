@@ -87,7 +87,7 @@ ROBOT_CONFIGS = {
         "solver": "newton",
         "integrator": "implicitfast",
         "njmax": 60,
-        "nconmax": 35,
+        "nconmax": 40,
         "ls_parallel": True,
         "cone": "elliptic",
     },
@@ -95,6 +95,11 @@ ROBOT_CONFIGS = {
         "setup_builder": lambda x: _setup_kitchen(x),
         "njmax": 3800,
         "nconmax": 900,
+    },
+    "tabletop": {
+        "setup_builder": lambda x: _setup_tabletop(x),
+        "njmax": 100,
+        "nconmax": 20,
     },
 }
 
@@ -256,6 +261,14 @@ def _setup_kitchen(articulation_builder):
 
     # Change pose of the robot to minimize overlap
     articulation_builder.joint_q[:2] = [1.5, -1.5]
+
+
+def _setup_tabletop(articulation_builder):
+    articulation_builder.add_mjcf(
+        newton.examples.get_asset("tabletop.xml"),
+        collapse_fixed_joints=True,
+        enable_self_collisions=True,
+    )
 
 
 class Example:

@@ -151,7 +151,7 @@ def test_contact_matcher_stacked_cubes(test: TestContactMatcher, device):
                 rotation = wp.quat_from_axis_angle(wp.vec3(0.0, 0.0, 1.0), rotation_angle)
 
                 # Create cube
-                cube = builder.add_body(xform=wp.transform([x_base, y_base, z_pos], rotation))
+                cube = builder.add_link(xform=wp.transform([x_base, y_base, z_pos], rotation))
                 builder.add_shape_box(
                     body=cube,
                     hx=cube_size / 2,
@@ -160,7 +160,6 @@ def test_contact_matcher_stacked_cubes(test: TestContactMatcher, device):
                 )
 
     model = builder.finalize(device=device)
-    model.ground = True
 
     # Create states
     state_0 = model.state()
@@ -173,7 +172,6 @@ def test_contact_matcher_stacked_cubes(test: TestContactMatcher, device):
     # Create collision pipeline with contact matching enabled
     collision_pipeline = CollisionPipelineUnified.from_model(
         model,
-        rigid_contact_margin=0.1,
         broad_phase_mode=BroadPhaseMode.NXN,
         enable_contact_matching=True,
     )
@@ -189,7 +187,7 @@ def test_contact_matcher_stacked_cubes(test: TestContactMatcher, device):
     for frame in range(5):
         # Get contacts using unified pipeline
         contacts = collision_pipeline.collide(model, state_0)
-        num_contacts = collision_pipeline.narrow_contact_count.numpy()[0]
+        num_contacts = contacts.rigid_contact_count.numpy()[0]
         contact_counts.append(num_contacts)
 
         frame_data = {
@@ -205,11 +203,11 @@ def test_contact_matcher_stacked_cubes(test: TestContactMatcher, device):
             # Use contact_pair_key and contact_key directly from narrow phase
             keys_wp = collision_pipeline.narrow_contact_pair_key
             payloads_wp = collision_pipeline.narrow_contact_key
-            num_keys_wp = collision_pipeline.narrow_contact_count
+            num_keys_wp = contacts.rigid_contact_count
             result_map = wp.zeros(max_contacts, dtype=wp.int32, device=device)
 
             # Collect data for debugging
-            positions_np = collision_pipeline.narrow_contact_position.numpy()[:num_contacts]
+            positions_np = contacts.rigid_contact_point0.numpy()[:num_contacts]
             pair_keys_np = keys_wp.numpy()[:num_contacts]
             feature_keys_np = payloads_wp.numpy()[:num_contacts]
 
