@@ -468,7 +468,7 @@ class NewtonEnv:
         # builder.approximate_meshes("bounding_box")
         
         # -- set initial pose
-        builder.joint_q[:3] = [0.0, -1.0, 0.8]
+        builder.joint_q[:3] = self.config["mjw_init_pos"]
         builder.joint_q[3:7] = [0.0, 0.0, 0.7071, 0.7071]
         builder.joint_q[7:] = self.config["mjw_joint_pos"]
         # -- set joint gains
@@ -480,12 +480,12 @@ class NewtonEnv:
     
     def add_sand(self, sand_builder: newton.ModelBuilder):
         particles_per_cell = 3.0
-        voxel_size = 0.03
+        voxel_size = 0.05
         density = 2500.0 # bulk density kg/m3
+        particle_lo = np.array([-1.0, -1.0, 0.0])  # emission lower bound
+        particle_hi = np.array([1.0, 1.0, 0.5])  # emission upper bound
         # particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
-        # particle_hi = np.array([0.5, 2.5, 0.15])  # emission upper bound
-        particle_lo = np.array([-0.5, -0.5, 0.0])  # emission lower bound
-        particle_hi = np.array([0.5, 0.5, 0.35])  # emission upper bound
+        # particle_hi = np.array([0.5, 0.5, 0.35])  # emission upper bound
         particle_res = np.array(
             np.ceil(particles_per_cell * (particle_hi - particle_lo) / voxel_size),
             dtype=int,
