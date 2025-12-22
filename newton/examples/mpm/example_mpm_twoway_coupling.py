@@ -143,7 +143,10 @@ class Example:
 
         mpm_model = SolverImplicitMPM.Model(self.sand_model, mpm_options)
         # read colliders from the RB model rather than the sand model
-        mpm_model.setup_collider(model=self.model)
+        mpm_model.setup_collider(
+            model=self.model, 
+            # body_mass=wp.zeros_like(self.model.body_mass), # kinematic setup
+            )
 
         self.mpm_solver = SolverImplicitMPM(mpm_model, mpm_options)
 
@@ -340,12 +343,12 @@ class Example:
         # generate a few boxes with varying sizes
         # boxes = [(0.45, 0.35, 0.25)]  # (hx, hy, hz)
         boxes = [
-            (0.25, 0.35, 0.25),
-            (0.25, 0.25, 0.25),
+            # (0.25, 0.35, 0.25),
+            # (0.25, 0.25, 0.25),
             (0.3, 0.2, 0.2),
-            (0.25, 0.35, 0.25),
-            (0.25, 0.25, 0.25),
-            (0.3, 0.2, 0.2),
+            # (0.25, 0.35, 0.25),
+            # (0.25, 0.25, 0.25),
+            # (0.3, 0.2, 0.2),
         ]  # (hx, hy, hz)
         for box in boxes:
             (hx, hy, hz) = box
