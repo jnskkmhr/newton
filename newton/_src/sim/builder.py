@@ -21,7 +21,7 @@ import copy
 import ctypes
 import math
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal
 
@@ -61,11 +61,14 @@ from ..utils import compute_world_offsets
 from ..utils.mesh import MeshAdjacency
 from .graph_coloring import ColoringAlgorithm, color_rigid_bodies, color_trimesh, combine_independent_particle_coloring
 from .joints import (
+    ActuatorMode,
     EqType,
     JointType,
+    get_joint_constraint_count,
     get_joint_dof_count,
+    infer_actuator_mode,
 )
-from .model import Model, ModelAttributeAssignment, ModelAttributeFrequency
+from .model import Model
 
 
 class ModelBuilder:
@@ -303,6 +306,7 @@ class ModelBuilder:
             effort_limit: float = 1e6,
             velocity_limit: float = 1e6,
             friction: float = 0.0,
+            actuator_mode: ActuatorMode | None = None,
         ):
             self.axis = wp.normalize(axis_to_vec3(axis))
             """The 3D joint axis in the joint parent anchor frame."""
@@ -332,6 +336,9 @@ class ModelBuilder:
             """Maximum velocity the joint axis can achieve. Defaults to 1e6."""
             self.friction = friction
             """Friction coefficient for the joint axis. Defaults to 0.0."""
+            self.actuator_mode = actuator_mode
+            """Actuator mode for this DOF. Determines which actuators are installed (see :class:`ActuatorMode`).
+            If None, the mode is inferred from gains and targets."""
 
             if self.target_pos > self.limit_upper or self.target_pos < self.limit_lower:
                 self.target_pos = 0.5 * (self.limit_lower + self.limit_upper)
@@ -357,7 +364,7 @@ class ModelBuilder:
         """
         Represents a custom attribute definition for the ModelBuilder.
         This is used to define custom attributes that are not part of the standard ModelBuilder API.
-        Custom attributes can be defined for the :class:`~newton.Model`, :class:`~newton.State`, :class:`~newton.Control`, or :class:`~newton.Contacts` objects, depending on the :class:`ModelAttributeAssignment` category.
+        Custom attributes can be defined for the :class:`~newton.Model`, :class:`~newton.State`, :class:`~newton.Control`, or :class:`~newton.Contacts` objects, depending on the :class:`Model.AttributeAssignment` category.
         Custom attributes must be declared before use via the :meth:`newton.ModelBuilder.add_custom_attribute` method.
 
         See :ref:`custom_attributes` for more information.
@@ -367,20 +374,21 @@ class ModelBuilder:
         """Variable name to expose on the Model. Must be a valid Python identifier."""
 
         dtype: type
-        """Warp dtype (e.g., wp.float32, wp.int32, wp.bool, wp.vec3) that is compatible with Warp arrays."""
+        """Warp dtype (e.g., wp.float32, wp.int32, wp.bool, wp.vec3) that is compatible with Warp arrays,
+        or ``str`` for string attributes that remain as Python lists."""
 
-        frequency: ModelAttributeFrequency | str
+        frequency: Model.AttributeFrequency | str
         """Frequency category that determines how the attribute is indexed in the Model.
 
         Can be either:
-            - A :class:`ModelAttributeFrequency` enum value for built-in frequencies (BODY, SHAPE, JOINT, etc.)
+            - A :class:`Model.AttributeFrequency` enum value for built-in frequencies (BODY, SHAPE, JOINT, etc.)
               Uses dict-based storage where keys are entity indices, allowing sparse assignment.
             - A string for custom frequencies (e.g., ``"mujoco:pair"``). Uses list-based storage for
               sequential data appended via :meth:`add_custom_values`. All attributes sharing the same
               custom frequency must have the same count, validated at finalize time."""
 
-        assignment: ModelAttributeAssignment = ModelAttributeAssignment.MODEL
-        """Assignment category (see :class:`ModelAttributeAssignment`), defaults to :attr:`ModelAttributeAssignment.MODEL`"""
+        assignment: Model.AttributeAssignment = Model.AttributeAssignment.MODEL
+        """Assignment category (see :class:`Model.AttributeAssignment`), defaults to :attr:`Model.AttributeAssignment.MODEL`"""
 
         namespace: str | None = None
         """Namespace for the attribute. If None, the attribute is added directly to the assigned object without a namespace."""
@@ -389,7 +397,8 @@ class ModelBuilder:
         """For attributes containing entity indices, specifies how values are transformed during add_world/add_builder merging.
 
         Built-in entity types (values are offset by entity count):
-            - ``"body"``, ``"shape"``, ``"joint"``, ``"joint_dof"``, ``"joint_coord"``, ``"articulation"``, ``"equality_constraint"``
+            - ``"body"``, ``"shape"``, ``"joint"``, ``"joint_dof"``, ``"joint_coord"``, ``"articulation"``, ``"equality_constraint"``,
+              ``"particle"``, ``"edge"``, ``"triangle"``, ``"tetrahedron"``, ``"spring"``
 
         Special handling:
             - ``"world"``: Values are replaced with ``current_world`` (not offset)
@@ -420,24 +429,24 @@ class ModelBuilder:
         urdf_attribute_name: str | None = None
         """Name of the attribute in the URDF definition. If None, the attribute name is used."""
 
-        usd_value_transformer: Callable[[Any], Any] | None = None
-        """Transformer function that converts a USD attribute value to a valid Warp dtype. If undefined, the generic converter from :func:`newton.usd.convert_warp_value` is used."""
+        usd_value_transformer: Callable[[Any, dict[str, Any] | None], Any] | None = None
+        """Transformer function that converts a USD attribute value to a valid Warp dtype. If undefined, the generic converter from :func:`newton.usd.convert_warp_value` is used. Receives an optional context dict with parsing-time information."""
 
-        mjcf_value_transformer: Callable[[str], Any] | None = None
-        """Transformer function that converts a MJCF attribute value string to a valid Warp dtype. If undefined, the generic converter from :func:`newton.utils.parse_warp_value_from_string` is used."""
+        mjcf_value_transformer: Callable[[str, dict[str, Any] | None], Any] | None = None
+        """Transformer function that converts a MJCF attribute value string to a valid Warp dtype. If undefined, the generic converter from :func:`newton.utils.parse_warp_value_from_string` is used. Receives an optional context dict with parsing-time information (e.g., use_degrees, joint_type)."""
 
-        urdf_value_transformer: Callable[[str], Any] | None = None
-        """Transformer function that converts a URDF attribute value string to a valid Warp dtype. If undefined, the generic converter from :func:`newton.utils.parse_warp_value_from_string` is used."""
+        urdf_value_transformer: Callable[[str, dict[str, Any] | None], Any] | None = None
+        """Transformer function that converts a URDF attribute value string to a valid Warp dtype. If undefined, the generic converter from :func:`newton.utils.parse_warp_value_from_string` is used. Receives an optional context dict with parsing-time information."""
 
         def __post_init__(self):
             """Initialize default values and validate dtype compatibility."""
-            # ensure dtype is a valid Warp dtype
-            try:
-                _size = wp.types.type_size_in_bytes(self.dtype)
-            except TypeError as e:
-                raise ValueError(
-                    f"Invalid dtype: {self.dtype}. Must be a valid Warp dtype that is compatible with Warp arrays."
-                ) from e
+            # Allow str dtype for string attributes (stored as Python lists, not warp arrays)
+            if self.dtype is not str:
+                # ensure dtype is a valid Warp dtype
+                try:
+                    _size = wp.types.type_size_in_bytes(self.dtype)
+                except TypeError as e:
+                    raise ValueError(f"Invalid dtype: {self.dtype}. Must be a valid Warp dtype or str.") from e
 
             # Set dtype-specific default value if none was provided
             if self.default is None:
@@ -456,6 +465,9 @@ class ModelBuilder:
         @staticmethod
         def _default_for_dtype(dtype: object) -> Any:
             """Get default value for dtype when not specified."""
+            # string type gets empty string
+            if dtype is str:
+                return ""
             # quaternions get identity quaternion
             if wp.types.type_is_quaternion(dtype):
                 return wp.quat_identity(dtype._wp_scalar_type_)
@@ -470,7 +482,7 @@ class ModelBuilder:
             return f"{self.namespace}:{self.name}" if self.namespace else self.name
 
         @property
-        def frequency_key(self) -> ModelAttributeFrequency | str:
+        def frequency_key(self) -> Model.AttributeFrequency | str:
             """Return the resolved frequency, with namespace prepended for custom string frequencies.
 
             For string frequencies: returns "namespace:frequency" if namespace is set, otherwise just "frequency".
@@ -490,7 +502,7 @@ class ModelBuilder:
 
             Returns:
                 True if the frequency is a string (custom frequency), False if it's a
-                ModelAttributeFrequency enum (built-in frequency like BODY, SHAPE, etc.).
+                Model.AttributeFrequency enum (built-in frequency like BODY, SHAPE, etc.).
             """
             return isinstance(self.frequency, str)
 
@@ -504,8 +516,13 @@ class ModelBuilder:
                 return 0
             return len(self.values)
 
-        def build_array(self, count: int, device: Devicelike | None = None, requires_grad: bool = False) -> wp.array:
-            """Build wp.array from count, dtype, default and overrides."""
+        def build_array(
+            self, count: int, device: Devicelike | None = None, requires_grad: bool = False
+        ) -> wp.array | list:
+            """Build wp.array (or list for string dtype) from count, dtype, default and overrides.
+
+            For string dtype, returns a Python list[str] instead of a Warp array.
+            """
             if self.values is None or len(self.values) == 0:
                 # No values provided, use default for all
                 arr = [self.default] * count
@@ -517,6 +534,11 @@ class ModelBuilder:
             else:
                 # Enum frequency: vals is a dict, use get() to fill gaps with defaults
                 arr = [self.values.get(i, self.default) for i in range(count)]
+
+            # String dtype: return as Python list instead of warp array
+            if self.dtype is str:
+                return arr
+
             return wp.array(arr, dtype=self.dtype, requires_grad=requires_grad, device=device)
 
     def __init__(self, up_axis: AxisType = Axis.Z, gravity: float = -9.81):
@@ -630,6 +652,7 @@ class ModelBuilder:
         # filtering to ignore certain collision pairs
         self.shape_collision_filter_pairs: list[tuple[int, int]] = []
 
+        self._requested_contact_attributes: set[str] = set()
         self._requested_state_attributes: set[str] = set()
 
         # springs
@@ -688,11 +711,13 @@ class ModelBuilder:
         self.joint_X_c = []  # frame of child com (in child coordinates)     (constant)
         self.joint_q = []
         self.joint_qd = []
+        self.joint_cts = []
         self.joint_f = []
 
         self.joint_type = []
         self.joint_key = []
         self.joint_armature = []
+        self.joint_act_mode = []  # Actuator mode per DOF (ActuatorMode.NONE=0, POSITION=1, VELOCITY=2, POSITION_VELOCITY=3, EFFORT=4)
         self.joint_target_ke = []
         self.joint_target_kd = []
         self.joint_limit_lower = []
@@ -712,6 +737,7 @@ class ModelBuilder:
 
         self.joint_q_start = []
         self.joint_qd_start = []
+        self.joint_cts_start = []
         self.joint_dof_dim = []
         self.joint_world = []  # world index for each joint
         self.joint_articulation = []  # articulation index for each joint, -1 if not in any articulation
@@ -722,6 +748,7 @@ class ModelBuilder:
 
         self.joint_dof_count = 0
         self.joint_coord_count = 0
+        self.joint_constraint_count = 0
 
         # current world index for entities being added to this builder.
         # set to -1 to create global entities shared across all worlds.
@@ -756,10 +783,30 @@ class ModelBuilder:
         self.equality_constraint_enabled = []
         self.equality_constraint_world = []
 
+        # per-world entity start indices
+        self.particle_world_start = []
+        self.body_world_start = []
+        self.shape_world_start = []
+        self.joint_world_start = []
+        self.articulation_world_start = []
+        self.equality_constraint_world_start = []
+        self.joint_dof_world_start = []
+        self.joint_coord_world_start = []
+        self.joint_constraint_world_start = []
+
         # Custom attributes (user-defined per-frequency arrays)
         self.custom_attributes: dict[str, ModelBuilder.CustomAttribute] = {}
         # Incrementally maintained counts for custom string frequencies
         self._custom_frequency_counts: dict[str, int] = {}
+
+    def add_shape_collision_filter_pair(self, shape_a: int, shape_b: int) -> None:
+        """Add a collision filter pair in canonical order.
+
+        Args:
+            shape_a: First shape index
+            shape_b: Second shape index
+        """
+        self.shape_collision_filter_pairs.append((min(shape_a, shape_b), max(shape_a, shape_b)))
 
     def add_custom_attribute(self, attribute: CustomAttribute) -> None:
         """
@@ -777,17 +824,17 @@ class ModelBuilder:
                 builder.add_custom_attribute(
                     newton.ModelBuilder.CustomAttribute(
                         name="my_attribute",
-                        frequency=newton.ModelAttributeFrequency.BODY,
+                        frequency=newton.Model.AttributeFrequency.BODY,
                         dtype=wp.float32,
                         default=20.0,
-                        assignment=newton.ModelAttributeAssignment.MODEL,
+                        assignment=newton.Model.AttributeAssignment.MODEL,
                         namespace="my_namespace",
                     )
                 )
                 builder.add_body(custom_attributes={"my_namespace:my_attribute": 30.0})
                 builder.add_body()  # we leave out the custom_attributes, so the attribute will use the default value 20.0
                 model = builder.finalize()
-                # the model has now an AttributeNamespace object with the name "my_namespace"
+                # the model has now a Model.AttributeNamespace object with the name "my_namespace"
                 # and an attribute "my_attribute" that is a wp.array of shape (body_count, 1)
                 # with the default value 20.0
                 assert np.allclose(model.my_namespace.my_attribute.numpy(), [30.0, 20.0])
@@ -819,7 +866,7 @@ class ModelBuilder:
         return key in self.custom_attributes
 
     def get_custom_attributes_by_frequency(
-        self, frequencies: Sequence[ModelAttributeFrequency]
+        self, frequencies: Sequence[Model.AttributeFrequency]
     ) -> list[CustomAttribute]:
         """
         Get custom attributes by frequency.
@@ -915,9 +962,9 @@ class ModelBuilder:
 
     def _process_custom_attributes(
         self,
-        entity_index: int,
+        entity_index: int | list[int],
         custom_attrs: dict[str, Any],
-        expected_frequency: ModelAttributeFrequency,
+        expected_frequency: Model.AttributeFrequency,
     ) -> None:
         """Process custom attributes from kwargs and assign them to an entity.
 
@@ -929,10 +976,10 @@ class ModelBuilder:
         If no namespace prefix is provided, the attribute is assumed to be in the default namespace (None).
 
         Args:
-            entity_index: Index of the entity (body, shape, joint, etc.)
+            entity_index: Index of the entity (body, shape, joint, etc.). Can be a single index or a list of indices.
             custom_attrs: Dictionary of custom attribute names to values.
-                Keys can be "attr_name" or "namespace:attr_name"
-            expected_frequency: Expected frequency for these attributes
+                Keys can be "attr_name" or "namespace:attr_name". Values can be a single value or a list of values.
+            expected_frequency: Expected frequency for these attributes.
         """
         for attr_key, value in custom_attrs.items():
             # Parse namespace prefix if present (format: "namespace:attr_name" or "attr_name")
@@ -956,7 +1003,20 @@ class ModelBuilder:
             # Set the value for this specific entity
             if custom_attr.values is None:
                 custom_attr.values = {}
-            custom_attr.values[entity_index] = value
+
+            # Fill in the value(s)
+            if isinstance(entity_index, list):
+                value_is_sequence = isinstance(value, (list, tuple))
+                if isinstance(value, np.ndarray):
+                    value_is_sequence = value.ndim != 0
+                if value_is_sequence:
+                    if len(value) != len(entity_index):
+                        raise ValueError(f"Expected {len(entity_index)} values, got {len(value)}")
+                    custom_attr.values.update(zip(entity_index, value, strict=False))
+                else:
+                    custom_attr.values.update((idx, value) for idx in entity_index)
+            else:
+                custom_attr.values[entity_index] = value
 
     def _process_joint_custom_attributes(
         self,
@@ -981,6 +1041,52 @@ class ModelBuilder:
             joint_index: Index of the joint
             custom_attrs: Dictionary of custom attribute names to values
         """
+
+        def apply_indexed_values(
+            *,
+            value: Any,
+            attr_key: str,
+            expected_frequency: Model.AttributeFrequency,
+            index_start: int,
+            index_count: int,
+            index_label: str,
+            count_label: str,
+            length_error_template: str,
+        ) -> None:
+            if isinstance(value, dict):
+                for offset, offset_value in value.items():
+                    if not isinstance(offset, int):
+                        raise TypeError(
+                            f"{expected_frequency.name} attribute '{attr_key}' dict keys must be integers "
+                            f"({index_label} indices), got {type(offset)}"
+                        )
+                    if offset < 0 or offset >= index_count:
+                        raise ValueError(
+                            f"{expected_frequency.name} attribute '{attr_key}' has invalid {index_label} index "
+                            f"{offset} (joint has {index_count} {count_label})"
+                        )
+                    self._process_custom_attributes(
+                        entity_index=index_start + offset,
+                        custom_attrs={attr_key: offset_value},
+                        expected_frequency=expected_frequency,
+                    )
+                return
+
+            value_sanitized = value
+            if not isinstance(value_sanitized, (list, tuple)) and index_count == 1:
+                value_sanitized = [value_sanitized]
+
+            actual = len(value_sanitized)
+            if actual != index_count:
+                raise ValueError(length_error_template.format(attr_key=attr_key, actual=actual, expected=index_count))
+
+            for i, indexed_value in enumerate(value_sanitized):
+                self._process_custom_attributes(
+                    entity_index=index_start + i,
+                    custom_attrs={attr_key: indexed_value},
+                    expected_frequency=expected_frequency,
+                )
+
         for attr_key, value in custom_attrs.items():
             # Look up the attribute to determine its frequency
             custom_attr = self.custom_attributes.get(attr_key)
@@ -991,15 +1097,15 @@ class ModelBuilder:
                 )
 
             # Process based on declared frequency
-            if custom_attr.frequency == ModelAttributeFrequency.JOINT:
+            if custom_attr.frequency == Model.AttributeFrequency.JOINT:
                 # Single value per joint
                 self._process_custom_attributes(
                     entity_index=joint_index,
                     custom_attrs={attr_key: value},
-                    expected_frequency=ModelAttributeFrequency.JOINT,
+                    expected_frequency=Model.AttributeFrequency.JOINT,
                 )
 
-            elif custom_attr.frequency == ModelAttributeFrequency.JOINT_DOF:
+            elif custom_attr.frequency == Model.AttributeFrequency.JOINT_DOF:
                 # Values per DOF - can be list or dict
                 dof_start = self.joint_qd_start[joint_index]
                 if joint_index + 1 < len(self.joint_qd_start):
@@ -1008,45 +1114,18 @@ class ModelBuilder:
                     dof_end = self.joint_dof_count
 
                 dof_count = dof_end - dof_start
+                apply_indexed_values(
+                    value=value,
+                    attr_key=attr_key,
+                    expected_frequency=Model.AttributeFrequency.JOINT_DOF,
+                    index_start=dof_start,
+                    index_count=dof_count,
+                    index_label="DOF",
+                    count_label="DOFs",
+                    length_error_template="JOINT_DOF '{attr_key}': got {actual}, expected {expected}",
+                )
 
-                # Check if value is a dict (mapping DOF index to value)
-                if isinstance(value, dict):
-                    # Dict format: only specified DOF indices have values, rest use defaults
-                    for dof_offset, dof_value in value.items():
-                        if not isinstance(dof_offset, int):
-                            raise TypeError(
-                                f"JOINT_DOF attribute '{attr_key}' dict keys must be integers (DOF indices), got {type(dof_offset)}"
-                            )
-                        if dof_offset < 0 or dof_offset >= dof_count:
-                            raise ValueError(
-                                f"JOINT_DOF attribute '{attr_key}' has invalid DOF index {dof_offset} (joint has {dof_count} DOFs)"
-                            )
-                        single_attr = {attr_key: dof_value}
-                        self._process_custom_attributes(
-                            entity_index=dof_start + dof_offset,
-                            custom_attrs=single_attr,
-                            expected_frequency=ModelAttributeFrequency.JOINT_DOF,
-                        )
-                else:
-                    # List format or single value for single-DOF joints
-                    value_sanitized = value
-                    if not isinstance(value_sanitized, (list, tuple)) and dof_count == 1:
-                        value_sanitized = [value_sanitized]
-
-                    actual = len(value_sanitized)
-                    if actual != dof_count:
-                        raise ValueError(f"JOINT_DOF '{attr_key}': got {actual}, expected {dof_count}")
-
-                    # Apply each value to its corresponding DOF
-                    for i, dof_value in enumerate(value_sanitized):
-                        single_attr = {attr_key: dof_value}
-                        self._process_custom_attributes(
-                            entity_index=dof_start + i,
-                            custom_attrs=single_attr,
-                            expected_frequency=ModelAttributeFrequency.JOINT_DOF,
-                        )
-
-            elif custom_attr.frequency == ModelAttributeFrequency.JOINT_COORD:
+            elif custom_attr.frequency == Model.AttributeFrequency.JOINT_COORD:
                 # Values per coordinate - can be list or dict
                 coord_start = self.joint_q_start[joint_index]
                 if joint_index + 1 < len(self.joint_q_start):
@@ -1055,44 +1134,40 @@ class ModelBuilder:
                     coord_end = self.joint_coord_count
 
                 coord_count = coord_end - coord_start
+                apply_indexed_values(
+                    value=value,
+                    attr_key=attr_key,
+                    expected_frequency=Model.AttributeFrequency.JOINT_COORD,
+                    index_start=coord_start,
+                    index_count=coord_count,
+                    index_label="coord",
+                    count_label="coordinates",
+                    length_error_template=(
+                        "JOINT_COORD attribute '{attr_key}' has {actual} values but joint has {expected} coordinates"
+                    ),
+                )
 
-                # Check if value is a dict (mapping coord index to value)
-                if isinstance(value, dict):
-                    # Dict format: only specified coord indices have values, rest use defaults
-                    for coord_offset, coord_value in value.items():
-                        if not isinstance(coord_offset, int):
-                            raise TypeError(
-                                f"JOINT_COORD attribute '{attr_key}' dict keys must be integers (coord indices), got {type(coord_offset)}"
-                            )
-                        if coord_offset < 0 or coord_offset >= coord_count:
-                            raise ValueError(
-                                f"JOINT_COORD attribute '{attr_key}' has invalid coord index {coord_offset} (joint has {coord_count} coordinates)"
-                            )
-                        single_attr = {attr_key: coord_value}
-                        self._process_custom_attributes(
-                            entity_index=coord_start + coord_offset,
-                            custom_attrs=single_attr,
-                            expected_frequency=ModelAttributeFrequency.JOINT_COORD,
-                        )
+            elif custom_attr.frequency == Model.AttributeFrequency.JOINT_CONSTRAINT:
+                # Values per constraint - can be list or dict
+                cts_start = self.joint_cts_start[joint_index]
+                if joint_index + 1 < len(self.joint_cts_start):
+                    cts_end = self.joint_cts_start[joint_index + 1]
                 else:
-                    # List format or single value for single-coordinate joints
-                    value_sanitized = value
-                    if not isinstance(value_sanitized, (list, tuple)) and coord_count == 1:
-                        value_sanitized = [value_sanitized]
+                    cts_end = self.joint_constraint_count
 
-                    if len(value_sanitized) != coord_count:
-                        raise ValueError(
-                            f"JOINT_COORD attribute '{attr_key}' has {len(value_sanitized)} values but joint has {coord_count} coordinates"
-                        )
-
-                    # Apply each value to its corresponding coordinate
-                    for i, coord_value in enumerate(value_sanitized):
-                        single_attr = {attr_key: coord_value}
-                        self._process_custom_attributes(
-                            entity_index=coord_start + i,
-                            custom_attrs=single_attr,
-                            expected_frequency=ModelAttributeFrequency.JOINT_COORD,
-                        )
+                cts_count = cts_end - cts_start
+                apply_indexed_values(
+                    value=value,
+                    attr_key=attr_key,
+                    expected_frequency=Model.AttributeFrequency.JOINT_CONSTRAINT,
+                    index_start=cts_start,
+                    index_count=cts_count,
+                    index_label="constraint",
+                    count_label="constraints",
+                    length_error_template=(
+                        "JOINT_CONSTRAINT attribute '{attr_key}' has {actual} values but joint has {expected} constraints"
+                    ),
+                )
 
             else:
                 raise ValueError(
@@ -1341,7 +1416,7 @@ class ModelBuilder:
             self._process_custom_attributes(
                 entity_index=articulation_idx,
                 custom_attrs=custom_attributes,
-                expected_frequency=ModelAttributeFrequency.ARTICULATION,
+                expected_frequency=Model.AttributeFrequency.ARTICULATION,
             )
 
     # region importers
@@ -1365,6 +1440,7 @@ class ModelBuilder:
         bodies_follow_joint_ordering: bool = True,
         collapse_fixed_joints: bool = False,
         mesh_maxhullvert: int = MESH_MAXHULLVERT,
+        force_position_velocity_actuation: bool = False,
     ):
         """
         Parses a URDF file and adds the bodies and joints to the given ModelBuilder.
@@ -1387,6 +1463,12 @@ class ModelBuilder:
             bodies_follow_joint_ordering (bool): If True, the bodies are added to the builder in the same order as the joints (parent then child body). Otherwise, bodies are added in the order they appear in the URDF. Default is True.
             collapse_fixed_joints (bool): If True, fixed joints are removed and the respective bodies are merged.
             mesh_maxhullvert (int): Maximum vertices for convex hull approximation of meshes.
+            force_position_velocity_actuation (bool): If True and both position (stiffness) and velocity
+                (damping) gains are non-zero, joints use :attr:`~newton.ActuatorMode.POSITION_VELOCITY` actuation mode.
+                If False (default), actuator modes are inferred per joint via :func:`newton.infer_actuator_mode`:
+                :attr:`~newton.ActuatorMode.POSITION` if stiffness > 0, :attr:`~newton.ActuatorMode.VELOCITY` if only
+                damping > 0, :attr:`~newton.ActuatorMode.EFFORT` if a drive is present but both gains are zero
+                (direct torque control), or :attr:`~newton.ActuatorMode.NONE` if no drive/actuation is applied.
         """
         from ..utils.import_urdf import parse_urdf  # noqa: PLC0415
 
@@ -1409,6 +1491,7 @@ class ModelBuilder:
             bodies_follow_joint_ordering=bodies_follow_joint_ordering,
             collapse_fixed_joints=collapse_fixed_joints,
             mesh_maxhullvert=mesh_maxhullvert,
+            force_position_velocity_actuation=force_position_velocity_actuation,
         )
 
     def add_usd(
@@ -1421,7 +1504,6 @@ class ModelBuilder:
         joint_drive_gains_scaling: float = 1.0,
         verbose: bool = False,
         ignore_paths: list[str] | None = None,
-        cloned_world: str | None = None,
         collapse_fixed_joints: bool = False,
         enable_self_collisions: bool = True,
         apply_up_axis_from_stage: bool = False,
@@ -1432,8 +1514,10 @@ class ModelBuilder:
         load_sites: bool = True,
         load_visual_shapes: bool = True,
         hide_collision_shapes: bool = False,
+        parse_mujoco_options: bool = True,
         mesh_maxhullvert: int = MESH_MAXHULLVERT,
         schema_resolvers: list[SchemaResolver] | None = None,
+        force_position_velocity_actuation: bool = False,
     ) -> dict[str, Any]:
         """Parses a Universal Scene Description (USD) stage containing UsdPhysics schema definitions for rigid-body articulations and adds the bodies, shapes and joints to the given ModelBuilder.
 
@@ -1449,7 +1533,6 @@ class ModelBuilder:
             joint_drive_gains_scaling (float): The default scaling of the PD control gains (stiffness and damping), if not set in the PhysicsScene with as "newton:joint_drive_gains_scaling".
             verbose (bool): If True, print additional information about the parsed USD file. Default is False.
             ignore_paths (List[str]): A list of regular expressions matching prim paths to ignore.
-            cloned_world (str): The prim path of a world which is cloned within this USD file. Siblings of this world prim will not be parsed but instead be replicated via `ModelBuilder.add_world(builder, xform)` to speed up the loading of many instantiated worlds.
             collapse_fixed_joints (bool): If True, fixed joints are removed and the respective bodies are merged. Only considered if not set on the PhysicsScene as "newton:collapse_fixed_joints".
             enable_self_collisions (bool): Determines the default behavior of whether self-collisions are enabled for all shapes within an articulation. If an articulation has the attribute ``physxArticulation:enabledSelfCollisions`` defined, this attribute takes precedence.
             apply_up_axis_from_stage (bool): If True, the up axis of the stage will be used to set :attr:`newton.ModelBuilder.up_axis`. Otherwise, the stage will be rotated such that its up axis aligns with the builder's up axis. Default is False.
@@ -1460,8 +1543,9 @@ class ModelBuilder:
             load_sites (bool): If True, sites (prims with MjcSiteAPI) are loaded as non-colliding reference points. If False, sites are ignored. Default is True.
             load_visual_shapes (bool): If True, non-physics visual geometry is loaded. If False, visual-only shapes are ignored (sites are still controlled by ``load_sites``). Default is True.
             hide_collision_shapes (bool): If True, collision shapes are hidden. Default is False.
-            mesh_maxhullvert (int): Maximum vertices for convex hull approximation of meshes.
-            schema_resolvers (list[SchemaResolver]): Resolver instances in priority order. Default is no schema resolution.
+            parse_mujoco_options (bool): Whether MuJoCo solver options from the PhysicsScene should be parsed. If False, solver options are not loaded and custom attributes retain their default values. Default is True.
+            mesh_maxhullvert (int): Maximum vertices for convex hull approximation of meshes. Note that an authored ``newton:maxHullVertices`` attribute on any shape with a ``NewtonMeshCollisionAPI`` will take priority over this value.
+            schema_resolvers (list[SchemaResolver]): Resolver instances in priority order. Default is to only parse Newton-specific attributes.
                 Schema resolvers collect per-prim "solver-specific" attributes, see :ref:`schema_resolvers` for more information.
                 These include namespaced attributes such as ``newton:*``, ``physx*``
                 (e.g., ``physxScene:*``, ``physxRigidBody:*``, ``physxSDFMeshCollision:*``), and ``mjc:*`` that
@@ -1471,6 +1555,12 @@ class ModelBuilder:
 
                 .. note::
                     Using the ``schema_resolvers`` argument is an experimental feature that may be removed or changed significantly in the future.
+            force_position_velocity_actuation (bool): If True and both stiffness (kp) and damping (kd)
+                are non-zero, joints use :attr:`~newton.ActuatorMode.POSITION_VELOCITY` actuation mode.
+                If False (default), actuator modes are inferred per joint via :func:`newton.infer_actuator_mode`:
+                :attr:`~newton.ActuatorMode.POSITION` if stiffness > 0, :attr:`~newton.ActuatorMode.VELOCITY` if only
+                damping > 0, :attr:`~newton.ActuatorMode.EFFORT` if a drive is present but both gains are zero
+                (direct torque control), or :attr:`~newton.ActuatorMode.NONE` if no drive/actuation is applied.
 
         Returns:
             dict: Dictionary with the following entries:
@@ -1522,7 +1612,6 @@ class ModelBuilder:
             joint_drive_gains_scaling=joint_drive_gains_scaling,
             verbose=verbose,
             ignore_paths=ignore_paths,
-            cloned_world=cloned_world,
             collapse_fixed_joints=collapse_fixed_joints,
             enable_self_collisions=enable_self_collisions,
             apply_up_axis_from_stage=apply_up_axis_from_stage,
@@ -1533,8 +1622,10 @@ class ModelBuilder:
             load_sites=load_sites,
             load_visual_shapes=load_visual_shapes,
             hide_collision_shapes=hide_collision_shapes,
+            parse_mujoco_options=parse_mujoco_options,
             mesh_maxhullvert=mesh_maxhullvert,
             schema_resolvers=schema_resolvers,
+            force_position_velocity_actuation=force_position_velocity_actuation,
         )
 
     def add_mjcf(
@@ -1551,6 +1642,7 @@ class ModelBuilder:
         parse_meshes: bool = True,
         parse_sites: bool = True,
         parse_visuals: bool = True,
+        parse_mujoco_options: bool = True,
         up_axis: AxisType = Axis.Z,
         ignore_names: Sequence[str] = (),
         ignore_classes: Sequence[str] = (),
@@ -1558,7 +1650,7 @@ class ModelBuilder:
         collider_classes: Sequence[str] = ("collision",),
         no_class_as_colliders: bool = True,
         force_show_colliders: bool = False,
-        enable_self_collisions: bool = False,
+        enable_self_collisions: bool = True,
         ignore_inertial_definitions: bool = True,
         ensure_nonstatic_links: bool = True,
         static_link_mass: float = 1e-2,
@@ -1567,6 +1659,8 @@ class ModelBuilder:
         skip_equality_constraints: bool = False,
         convert_3d_hinge_to_ball_joints: bool = False,
         mesh_maxhullvert: int = MESH_MAXHULLVERT,
+        ctrl_direct: bool = False,
+        path_resolver: Callable[[str | None, str], str] | None = None,
     ):
         """
         Parses MuJoCo XML (MJCF) file and adds the bodies and joints to the given ModelBuilder.
@@ -1584,6 +1678,7 @@ class ModelBuilder:
             parse_meshes (bool): Whether geometries of type `"mesh"` should be parsed. If False, geometries of type `"mesh"` are ignored.
             parse_sites (bool): Whether sites (non-colliding reference points) should be parsed. If False, sites are ignored.
             parse_visuals (bool): Whether visual geometries (non-collision shapes) should be loaded. If False, visual shapes are not loaded (different from `hide_visuals` which loads but hides them). Default is True.
+            parse_mujoco_options (bool): Whether solver options from the MJCF `<option>` tag should be parsed. If False, solver options are not loaded and custom attributes retain their default values. Default is True.
             up_axis (AxisType): The up axis of the MuJoCo scene. The default is Z up.
             ignore_names (Sequence[str]): A list of regular expressions. Bodies and joints with a name matching one of the regular expressions will be ignored.
             ignore_classes (Sequence[str]): A list of regular expressions. Bodies and joints with a class matching one of the regular expressions will be ignored.
@@ -1600,6 +1695,12 @@ class ModelBuilder:
             skip_equality_constraints (bool): Whether <equality> tags should be parsed. If True, equality constraints are ignored.
             convert_3d_hinge_to_ball_joints (bool): If True, series of three hinge joints are converted to a single ball joint. Default is False.
             mesh_maxhullvert (int): Maximum vertices for convex hull approximation of meshes.
+            ctrl_direct (bool): If True, all actuators use :attr:`~newton.solvers.SolverMuJoCo.CtrlSource.CTRL_DIRECT` mode
+                where control comes directly from ``control.mujoco.ctrl`` (MuJoCo-native behavior).
+                See :ref:`custom_attributes` for details on custom attributes. If False (default), position/velocity
+                actuators use :attr:`~newton.solvers.SolverMuJoCo.CtrlSource.JOINT_TARGET` mode where control comes
+                from :attr:`newton.Control.joint_target_pos` and :attr:`newton.Control.joint_target_vel`.
+            path_resolver (Callable): Callback to resolve file paths. Takes (base_dir, file_path) and returns a resolved path. For <include> elements, can return either a file path or XML content directly. For asset elements (mesh, texture, etc.), must return an absolute file path. The default resolver joins paths and returns absolute file paths.
         """
         from ..solvers.mujoco.solver_mujoco import SolverMuJoCo  # noqa: PLC0415
         from ..utils.import_mjcf import parse_mjcf  # noqa: PLC0415
@@ -1618,6 +1719,7 @@ class ModelBuilder:
             parse_meshes=parse_meshes,
             parse_sites=parse_sites,
             parse_visuals=parse_visuals,
+            parse_mujoco_options=parse_mujoco_options,
             up_axis=up_axis,
             ignore_names=ignore_names,
             ignore_classes=ignore_classes,
@@ -1634,6 +1736,8 @@ class ModelBuilder:
             skip_equality_constraints=skip_equality_constraints,
             convert_3d_hinge_to_ball_joints=convert_3d_hinge_to_ball_joints,
             mesh_maxhullvert=mesh_maxhullvert,
+            ctrl_direct=ctrl_direct,
+            path_resolver=path_resolver,
         )
 
     # endregion
@@ -1806,6 +1910,7 @@ class ModelBuilder:
             # No world context (add_builder called directly), copy scalar gravity
             self.gravity = builder.gravity
 
+        self._requested_contact_attributes.update(builder._requested_contact_attributes)
         self._requested_state_attributes.update(builder._requested_state_attributes)
 
         # explicitly resolve the transform multiplication function to avoid
@@ -1824,8 +1929,13 @@ class ModelBuilder:
         start_joint_idx = self.joint_count
         start_joint_dof_idx = self.joint_dof_count
         start_joint_coord_idx = self.joint_coord_count
+        start_joint_constraint_idx = self.joint_constraint_count
         start_articulation_idx = self.articulation_count
         start_equality_constraint_idx = len(self.equality_constraint_type)
+        start_edge_idx = self.edge_count
+        start_triangle_idx = self.tri_count
+        start_tetrahedron_idx = self.tet_count
+        start_spring_idx = self.spring_count
 
         if builder.particle_count:
             self.particle_max_velocity = builder.particle_max_velocity
@@ -1898,6 +2008,7 @@ class ModelBuilder:
 
             self.joint_q_start.extend([c + self.joint_coord_count for c in builder.joint_q_start])
             self.joint_qd_start.extend([c + self.joint_dof_count for c in builder.joint_qd_start])
+            self.joint_cts_start.extend([c + self.joint_constraint_count for c in builder.joint_cts_start])
 
         if xform is not None:
             for i in range(builder.body_count):
@@ -1988,6 +2099,7 @@ class ModelBuilder:
             "joint_dof_dim",
             "joint_key",
             "joint_qd",
+            "joint_cts",
             "joint_f",
             "joint_target_pos",
             "joint_target_vel",
@@ -1997,6 +2109,7 @@ class ModelBuilder:
             "joint_limit_kd",
             "joint_target_ke",
             "joint_target_kd",
+            "joint_act_mode",
             "joint_effort_limit",
             "joint_velocity_limit",
             "joint_friction",
@@ -2046,6 +2159,7 @@ class ModelBuilder:
 
         self.joint_dof_count += builder.joint_dof_count
         self.joint_coord_count += builder.joint_coord_count
+        self.joint_constraint_count += builder.joint_constraint_count
 
         # Merge custom attributes from the sub-builder
         # Shared offset map for both frequency and references
@@ -2056,8 +2170,14 @@ class ModelBuilder:
             "joint": start_joint_idx,
             "joint_dof": start_joint_dof_idx,
             "joint_coord": start_joint_coord_idx,
+            "joint_constraint": start_joint_constraint_idx,
             "articulation": start_articulation_idx,
             "equality_constraint": start_equality_constraint_idx,
+            "particle": start_particle_idx,
+            "edge": start_edge_idx,
+            "triangle": start_triangle_idx,
+            "tetrahedron": start_tetrahedron_idx,
+            "spring": start_spring_idx,
         }
 
         # Snapshot custom frequency counts BEFORE iteration (they get updated during merge)
@@ -2079,14 +2199,23 @@ class ModelBuilder:
             )
 
         for full_key, attr in builder.custom_attributes.items():
+            # Fast path: skip attributes with no values (avoids computing offsets/closures)
+            if not attr.values:
+                # Still need to declare empty attribute on first merge
+                if full_key not in self.custom_attributes:
+                    freq_key = attr.frequency_key
+                    mapped_values = [] if isinstance(freq_key, str) else {}
+                    self.custom_attributes[full_key] = replace(attr, values=mapped_values)
+                continue
+
             # Index offset based on frequency
             freq_key = attr.frequency_key
             if isinstance(freq_key, str):
                 # Custom frequency: offset by pre-merge count
                 index_offset = custom_frequency_offsets.get(freq_key, 0)
-            elif attr.frequency == ModelAttributeFrequency.ONCE:
+            elif attr.frequency == Model.AttributeFrequency.ONCE:
                 index_offset = 0
-            elif attr.frequency == ModelAttributeFrequency.WORLD:
+            elif attr.frequency == Model.AttributeFrequency.WORLD:
                 # WORLD frequency: indices are keyed by world index, not by offset
                 # When called via add_world(), current_world is the world being added
                 index_offset = 0 if self.current_world == -1 else self.current_world
@@ -2118,18 +2247,12 @@ class ModelBuilder:
             # Declare the attribute if it doesn't exist in the main builder
             merged = self.custom_attributes.get(full_key)
             if merged is None:
-                if attr.values:
-                    if isinstance(freq_key, str):
-                        # String frequency: copy list as-is (no offset for sequential data)
-                        mapped_values = [transform_value(value) for value in attr.values]
-                    else:
-                        # Enum frequency: remap dict indices with offset
-                        mapped_values = {
-                            index_offset + idx: transform_value(value) for idx, value in attr.values.items()
-                        }
+                if isinstance(freq_key, str):
+                    # String frequency: copy list as-is (no offset for sequential data)
+                    mapped_values = [transform_value(value) for value in attr.values]
                 else:
-                    # Initialize empty container based on frequency type
-                    mapped_values = [] if isinstance(freq_key, str) else {}
+                    # Enum frequency: remap dict indices with offset
+                    mapped_values = {index_offset + idx: transform_value(value) for idx, value in attr.values.items()}
                 self.custom_attributes[full_key] = replace(attr, values=mapped_values)
                 continue
 
@@ -2149,8 +2272,6 @@ class ModelBuilder:
                     f"Custom attribute '{full_key}' default mismatch when merging builders: "
                     f"existing={merged.default}, incoming={attr.default}"
                 )
-            if not attr.values:
-                continue
 
             # Remap indices and copy values
             if merged.values is None:
@@ -2279,7 +2400,7 @@ class ModelBuilder:
             self._process_custom_attributes(
                 entity_index=body_id,
                 custom_attrs=custom_attributes,
-                expected_frequency=ModelAttributeFrequency.BODY,
+                expected_frequency=Model.AttributeFrequency.BODY,
             )
 
         return body_id
@@ -2385,7 +2506,7 @@ class ModelBuilder:
                 If None, the identity transform is used.
             collision_filter_parent (bool): Whether to filter collisions between shapes of the parent and child bodies.
             enabled (bool): Whether the joint is enabled (not considered by :class:`SolverFeatherstone`).
-            custom_attributes: Dictionary of custom attribute keys (see :attr:`CustomAttribute.key`) to values. Note that custom attributes with frequency :attr:`ModelAttributeFrequency.JOINT_DOF` or :attr:`ModelAttributeFrequency.JOINT_COORD` can be provided as: (1) lists with length equal to the joint's DOF or coordinate count, (2) dicts mapping DOF/coordinate indices to values, or (3) scalar values for single-DOF/single-coordinate joints (automatically expanded to lists). Custom attributes with frequency :attr:`ModelAttributeFrequency.JOINT` require a single value to be defined.
+            custom_attributes: Dictionary of custom attribute keys (see :attr:`CustomAttribute.key`) to values. Note that custom attributes with frequency :attr:`Model.AttributeFrequency.JOINT_DOF` or :attr:`Model.AttributeFrequency.JOINT_COORD` can be provided as: (1) lists with length equal to the joint's DOF or coordinate count, (2) dicts mapping DOF/coordinate indices to values, or (3) scalar values for single-DOF/single-coordinate joints (automatically expanded to lists). Custom attributes with frequency :attr:`Model.AttributeFrequency.JOINT` require a single value to be defined.
 
         Returns:
             The index of the added joint.
@@ -2441,6 +2562,18 @@ class ModelBuilder:
             self.joint_axis.append(dim.axis)
             self.joint_target_pos.append(dim.target_pos)
             self.joint_target_vel.append(dim.target_vel)
+
+            # Use actuator_mode if explicitly set, otherwise infer from gains
+            if dim.actuator_mode is not None:
+                mode = int(dim.actuator_mode)
+            else:
+                # Infer has_drive from whether gains are non-zero: non-zero gains imply a drive exists.
+                # This ensures freejoints (gains=0) get NONE, while joints with gains get appropriate mode.
+                has_drive = dim.target_ke != 0.0 or dim.target_kd != 0.0
+                mode = int(infer_actuator_mode(dim.target_ke, dim.target_kd, has_drive=has_drive))
+
+            # Store per-DOF actuator properties
+            self.joint_act_mode.append(mode)
             self.joint_target_ke.append(dim.target_ke)
             self.joint_target_kd.append(dim.target_kd)
             self.joint_limit_ke.append(dim.limit_ke)
@@ -2464,12 +2597,15 @@ class ModelBuilder:
             add_axis_dim(dim)
 
         dof_count, coord_count = get_joint_dof_count(joint_type, len(linear_axes) + len(angular_axes))
+        cts_count = get_joint_constraint_count(joint_type, len(linear_axes) + len(angular_axes))
 
         for _ in range(coord_count):
             self.joint_q.append(0.0)
         for _ in range(dof_count):
             self.joint_qd.append(0.0)
             self.joint_f.append(0.0)
+        for _ in range(cts_count):
+            self.joint_cts.append(0.0)
 
         if joint_type == JointType.FREE or joint_type == JointType.DISTANCE or joint_type == JointType.BALL:
             # ensure that a valid quaternion is used for the angular dofs
@@ -2477,9 +2613,11 @@ class ModelBuilder:
 
         self.joint_q_start.append(self.joint_coord_count)
         self.joint_qd_start.append(self.joint_dof_count)
+        self.joint_cts_start.append(self.joint_constraint_count)
 
         self.joint_dof_count += dof_count
         self.joint_coord_count += coord_count
+        self.joint_constraint_count += cts_count
 
         if collision_filter_parent and parent > -1:
             for child_shape in self.body_shapes[child]:
@@ -2488,11 +2626,7 @@ class ModelBuilder:
                 for parent_shape in self.body_shapes[parent]:
                     if not self.shape_flags[parent_shape] & ShapeFlags.COLLIDE_SHAPES:
                         continue
-                    # Ensure canonical order (smaller, larger) for consistent lookup
-                    a, b = parent_shape, child_shape
-                    if a > b:
-                        a, b = b, a
-                    self.shape_collision_filter_pairs.append((a, b))
+                    self.add_shape_collision_filter_pair(parent_shape, child_shape)
 
         joint_index = self.joint_count - 1
 
@@ -2524,6 +2658,7 @@ class ModelBuilder:
         effort_limit: float | None = None,
         velocity_limit: float | None = None,
         friction: float | None = None,
+        actuator_mode: ActuatorMode | None = None,
         key: str | None = None,
         collision_filter_parent: bool = True,
         enabled: bool = True,
@@ -2581,6 +2716,7 @@ class ModelBuilder:
                 effort_limit=effort_limit if effort_limit is not None else self.default_joint_cfg.effort_limit,
                 velocity_limit=velocity_limit if velocity_limit is not None else self.default_joint_cfg.velocity_limit,
                 friction=friction if friction is not None else self.default_joint_cfg.friction,
+                actuator_mode=actuator_mode if actuator_mode is not None else self.default_joint_cfg.actuator_mode,
             )
         return self.add_joint(
             JointType.REVOLUTE,
@@ -2615,6 +2751,7 @@ class ModelBuilder:
         effort_limit: float | None = None,
         velocity_limit: float | None = None,
         friction: float | None = None,
+        actuator_mode: ActuatorMode | None = None,
         key: str | None = None,
         collision_filter_parent: bool = True,
         enabled: bool = True,
@@ -2671,6 +2808,7 @@ class ModelBuilder:
                 effort_limit=effort_limit if effort_limit is not None else self.default_joint_cfg.effort_limit,
                 velocity_limit=velocity_limit if velocity_limit is not None else self.default_joint_cfg.velocity_limit,
                 friction=friction if friction is not None else self.default_joint_cfg.friction,
+                actuator_mode=actuator_mode if actuator_mode is not None else self.default_joint_cfg.actuator_mode,
             )
         return self.add_joint(
             JointType.PRISMATIC,
@@ -2697,6 +2835,7 @@ class ModelBuilder:
         collision_filter_parent: bool = True,
         enabled: bool = True,
         custom_attributes: dict[str, Any] | None = None,
+        actuator_mode: ActuatorMode | None = None,
     ) -> int:
         """Adds a ball (spherical) joint to the model. Its position is defined by a 4D quaternion (xyzw) and its velocity is a 3D vector.
 
@@ -2711,6 +2850,7 @@ class ModelBuilder:
             collision_filter_parent: Whether to filter collisions between shapes of the parent and child bodies.
             enabled: Whether the joint is enabled.
             custom_attributes: Dictionary of custom attribute values for JOINT, JOINT_DOF, or JOINT_COORD frequency attributes.
+            actuator_mode: The actuator mode for this joint's DOFs. If None, defaults to NONE.
 
         Returns:
             The index of the added joint.
@@ -2728,16 +2868,19 @@ class ModelBuilder:
             axis=Axis.X,
             armature=armature,
             friction=friction,
+            actuator_mode=actuator_mode,
         )
         y = ModelBuilder.JointDofConfig(
             axis=Axis.Y,
             armature=armature,
             friction=friction,
+            actuator_mode=actuator_mode,
         )
         z = ModelBuilder.JointDofConfig(
             axis=Axis.Z,
             armature=armature,
             friction=friction,
+            actuator_mode=actuator_mode,
         )
 
         return self.add_joint(
@@ -3100,7 +3243,7 @@ class ModelBuilder:
             self._process_custom_attributes(
                 entity_index=constraint_idx,
                 custom_attrs=custom_attributes,
-                expected_frequency=ModelAttributeFrequency.EQUALITY_CONSTRAINT,
+                expected_frequency=Model.AttributeFrequency.EQUALITY_CONSTRAINT,
             )
 
         return constraint_idx
@@ -3390,20 +3533,25 @@ class ModelBuilder:
 
             q_start = self.joint_q_start[i]
             qd_start = self.joint_qd_start[i]
+            cts_start = self.joint_cts_start[i]
             if i < self.joint_count - 1:
                 q_dim = self.joint_q_start[i + 1] - q_start
                 qd_dim = self.joint_qd_start[i + 1] - qd_start
+                cts_dim = self.joint_cts_start[i + 1] - cts_start
             else:
                 q_dim = len(self.joint_q) - q_start
                 qd_dim = len(self.joint_qd) - qd_start
+                cts_dim = len(self.joint_cts) - cts_start
 
             data = {
                 "type": self.joint_type[i],
                 "q": self.joint_q[q_start : q_start + q_dim],
                 "qd": self.joint_qd[qd_start : qd_start + qd_dim],
+                "cts": self.joint_cts[cts_start : cts_start + cts_dim],
                 "armature": self.joint_armature[qd_start : qd_start + qd_dim],
                 "q_start": q_start,
                 "qd_start": qd_start,
+                "cts_start": cts_start,
                 "key": key,
                 "parent_xform": wp.transform_expand(self.joint_X_p[i]),
                 "child_xform": wp.transform_expand(self.joint_X_c[i]),
@@ -3419,6 +3567,7 @@ class ModelBuilder:
                 data["axes"].append(
                     {
                         "axis": self.joint_axis[j],
+                        "actuator_mode": self.joint_act_mode[j],
                         "target_ke": self.joint_target_ke[j],
                         "target_kd": self.joint_target_kd[j],
                         "limit_ke": self.joint_limit_ke[j],
@@ -3621,13 +3770,16 @@ class ModelBuilder:
         self.joint_child.clear()
         self.joint_q.clear()
         self.joint_qd.clear()
+        self.joint_cts.clear()
         self.joint_q_start.clear()
         self.joint_qd_start.clear()
+        self.joint_cts_start.clear()
         self.joint_enabled.clear()
         self.joint_armature.clear()
         self.joint_X_p.clear()
         self.joint_X_c.clear()
         self.joint_axis.clear()
+        self.joint_act_mode.clear()
         self.joint_target_ke.clear()
         self.joint_target_kd.clear()
         self.joint_limit_lower.clear()
@@ -3647,8 +3799,10 @@ class ModelBuilder:
             self.joint_child.append(body_remap[joint["child"]])
             self.joint_q_start.append(len(self.joint_q))
             self.joint_qd_start.append(len(self.joint_qd))
+            self.joint_cts_start.append(len(self.joint_cts))
             self.joint_q.extend(joint["q"])
             self.joint_qd.extend(joint["qd"])
+            self.joint_cts.extend(joint["cts"])
             self.joint_armature.extend(joint["armature"])
             self.joint_enabled.append(joint["enabled"])
             self.joint_X_p.append(joint["parent_xform"])
@@ -3667,6 +3821,7 @@ class ModelBuilder:
                 self.joint_articulation.append(-1)
             for axis in joint["axes"]:
                 self.joint_axis.append(axis["axis"])
+                self.joint_act_mode.append(axis["actuator_mode"])
                 self.joint_target_ke.append(axis["target_ke"])
                 self.joint_target_kd.append(axis["target_kd"])
                 self.joint_limit_lower.append(axis["limit_lower"])
@@ -3676,6 +3831,9 @@ class ModelBuilder:
                 self.joint_target_pos.append(axis["target_pos"])
                 self.joint_target_vel.append(axis["target_vel"])
                 self.joint_effort_limit.append(axis["effort_limit"])
+
+        # Reset the constraint count based on the retained joints
+        self.joint_constraint_count = len(self.joint_cts)
 
         # Remap equality constraint body/joint indices and transform anchors for merged bodies
         for i in range(len(self.equality_constraint_body1)):
@@ -3744,7 +3902,7 @@ class ModelBuilder:
     # muscles
     def add_muscle(
         self, bodies: list[int], positions: list[Vec3], f0: float, lm: float, lt: float, lmax: float, pen: float
-    ) -> float:
+    ) -> int:
         """Adds a muscle-tendon activation unit.
 
         Args:
@@ -3754,6 +3912,7 @@ class ModelBuilder:
             lm: Muscle length
             lt: Tendon length
             lmax: Maximally efficient muscle length
+            pen: Penalty factor
 
         Returns:
             The index of the muscle in the model
@@ -3851,7 +4010,7 @@ class ModelBuilder:
         if cfg.has_shape_collision:
             # no contacts between shapes of the same body
             for same_body_shape in self.body_shapes[body]:
-                self.shape_collision_filter_pairs.append((same_body_shape, shape))
+                self.add_shape_collision_filter_pair(same_body_shape, shape)
         self.body_shapes[body].append(shape)
         self.shape_key.append(key or f"shape_{shape}")
         self.shape_transform.append(xform)
@@ -3890,7 +4049,7 @@ class ModelBuilder:
             for parent_body in self.joint_parents[body]:
                 if parent_body > -1:
                     for parent_shape in self.body_shapes[parent_body]:
-                        self.shape_collision_filter_pairs.append((parent_shape, shape))
+                        self.add_shape_collision_filter_pair(parent_shape, shape)
 
         if not is_static and cfg.density > 0.0 and body >= 0 and not self.body_lock_inertia[body]:
             (m, c, I) = compute_shape_inertia(type, scale, src, cfg.density, cfg.is_solid, cfg.thickness)
@@ -3902,7 +4061,7 @@ class ModelBuilder:
             self._process_custom_attributes(
                 entity_index=shape,
                 custom_attrs=custom_attributes,
-                expected_frequency=ModelAttributeFrequency.SHAPE,
+                expected_frequency=Model.AttributeFrequency.SHAPE,
             )
 
         return shape
@@ -4658,6 +4817,9 @@ class ModelBuilder:
                             continue
                 # note we need to copy the mesh to avoid modifying the original mesh
                 self.shape_source[shape] = self.shape_source[shape].copy(vertices=rmesh.vertices, indices=rmesh.indices)
+                # mark convex_hull result as convex mesh type for efficient collision detection
+                if method == "convex_hull":
+                    self.shape_type[shape] = GeoType.CONVEX_MESH
                 remeshed_shapes.add(shape)
 
         if method == "bounding_box":
@@ -4927,6 +5089,7 @@ class ModelBuilder:
         mass: float,
         radius: float | None = None,
         flags: int = ParticleFlags.ACTIVE,
+        custom_attributes: dict[str, Any] | None = None,
     ) -> int:
         """Adds a single particle to the model.
 
@@ -4935,7 +5098,8 @@ class ModelBuilder:
             vel: The initial velocity of the particle.
             mass: The mass of the particle.
             radius: The radius of the particle used in collision handling. If None, the radius is set to the default value (:attr:`default_particle_radius`).
-            flags: The flags that control the dynamical behavior of the particle, see PARTICLE_FLAG_* constants.
+            flags: The flags that control the dynamical behavior of the particle, see :class:`newton.ParticleFlags`.
+            custom_attributes: Dictionary of custom attribute names to values.
 
         Note:
             Set the mass equal to zero to create a 'kinematic' particle that is not subject to dynamics.
@@ -4954,6 +5118,14 @@ class ModelBuilder:
 
         particle_id = self.particle_count - 1
 
+        # Process custom attributes
+        if custom_attributes:
+            self._process_custom_attributes(
+                entity_index=particle_id,
+                custom_attrs=custom_attributes,
+                expected_frequency=Model.AttributeFrequency.PARTICLE,
+            )
+
         return particle_id
 
     def add_particles(
@@ -4962,33 +5134,55 @@ class ModelBuilder:
         vel: list[Vec3],
         mass: list[float],
         radius: list[float] | None = None,
-        flags: list[wp.uint32] | None = None,
+        flags: list[int] | None = None,
+        custom_attributes: dict[str, Any] | None = None,
     ):
-        """Adds a group particles to the model.
+        """Adds a group of particles to the model.
 
         Args:
-            pos: The initial positions of the particle.
-            vel: The initial velocities of the particle.
+            pos: The initial positions of the particles.
+            vel: The initial velocities of the particles.
             mass: The mass of the particles.
             radius: The radius of the particles used in collision handling. If None, the radius is set to the default value (:attr:`default_particle_radius`).
-            flags: The flags that control the dynamical behavior of the particles, see PARTICLE_FLAG_* constants.
+            flags: The flags that control the dynamical behavior of the particles, see :class:`newton.ParticleFlags`.
+            custom_attributes: Dictionary of custom attribute names to lists of values (one value for each particle).
 
         Note:
             Set the mass equal to zero to create a 'kinematic' particle that is not subject to dynamics.
         """
+        particle_start = self.particle_count
+        particle_count = len(pos)
+
         self.particle_q.extend(pos)
         self.particle_qd.extend(vel)
         self.particle_mass.extend(mass)
         if radius is None:
-            radius = [self.default_particle_radius] * len(pos)
+            radius = [self.default_particle_radius] * particle_count
         if flags is None:
-            flags = [ParticleFlags.ACTIVE] * len(pos)
+            flags = [ParticleFlags.ACTIVE] * particle_count
         self.particle_radius.extend(radius)
         self.particle_flags.extend(flags)
         # Maintain world assignment for bulk particle creation
-        self.particle_world.extend([self.current_world] * len(pos))
+        self.particle_world.extend([self.current_world] * particle_count)
 
-    def add_spring(self, i: int, j, ke: float, kd: float, control: float):
+        # Process custom attributes
+        if custom_attributes and particle_count:
+            particle_indices = list(range(particle_start, particle_start + particle_count))
+            self._process_custom_attributes(
+                entity_index=particle_indices,
+                custom_attrs=custom_attributes,
+                expected_frequency=Model.AttributeFrequency.PARTICLE,
+            )
+
+    def add_spring(
+        self,
+        i: int,
+        j: int,
+        ke: float,
+        kd: float,
+        control: float,
+        custom_attributes: dict[str, Any] | None = None,
+    ):
         """Adds a spring between two particles in the system
 
         Args:
@@ -4997,6 +5191,7 @@ class ModelBuilder:
             ke: The elastic stiffness of the spring
             kd: The damping stiffness of the spring
             control: The actuation level of the spring
+            custom_attributes: Dictionary of custom attribute names to values.
 
         Note:
             The spring is created with a rest-length based on the distance
@@ -5018,6 +5213,15 @@ class ModelBuilder:
 
         self.spring_rest_length.append(l)
 
+        # Process custom attributes
+        if custom_attributes:
+            spring_index = len(self.spring_rest_length) - 1
+            self._process_custom_attributes(
+                entity_index=spring_index,
+                custom_attrs=custom_attributes,
+                expected_frequency=Model.AttributeFrequency.SPRING,
+            )
+
     def add_triangle(
         self,
         i: int,
@@ -5028,16 +5232,23 @@ class ModelBuilder:
         tri_kd: float | None = None,
         tri_drag: float | None = None,
         tri_lift: float | None = None,
+        custom_attributes: dict[str, Any] | None = None,
     ) -> float:
         """Adds a triangular FEM element between three particles in the system.
 
         Triangles are modeled as viscoelastic elements with elastic stiffness and damping
-        parameters specified on the model. See model.tri_ke, model.tri_kd.
+        parameters specified on the model. See :attr:`~newton.Model.tri_ke`, :attr:`~newton.Model.tri_kd`.
 
         Args:
-            i: The index of the first particle
-            j: The index of the second particle
-            k: The index of the third particle
+            i: The index of the first particle.
+            j: The index of the second particle.
+            k: The index of the third particle.
+            tri_ke: The elastic stiffness of the triangle. If None, the default value (:attr:`default_tri_ke`) is used.
+            tri_ka: The area stiffness of the triangle. If None, the default value (:attr:`default_tri_ka`) is used.
+            tri_kd: The damping stiffness of the triangle. If None, the default value (:attr:`default_tri_kd`) is used.
+            tri_drag: The drag coefficient of the triangle. If None, the default value (:attr:`default_tri_drag`) is used.
+            tri_lift: The lift coefficient of the triangle. If None, the default value (:attr:`default_tri_lift`) is used.
+            custom_attributes: Dictionary of custom attribute names to values.
 
         Return:
             The area of the triangle
@@ -5046,7 +5257,6 @@ class ModelBuilder:
             The triangle is created with a rest-length based on the distance
             between the particles in their initial configuration.
         """
-        # TODO: Expose elastic parameters on a per-element basis
         tri_ke = tri_ke if tri_ke is not None else self.default_tri_ke
         tri_ka = tri_ka if tri_ka is not None else self.default_tri_ka
         tri_kd = tri_kd if tri_kd is not None else self.default_tri_kd
@@ -5084,18 +5294,28 @@ class ModelBuilder:
             self.tri_activations.append(0.0)
             self.tri_materials.append((tri_ke, tri_ka, tri_kd, tri_drag, tri_lift))
             self.tri_areas.append(area)
+
+            # Process custom attributes
+            if custom_attributes:
+                tri_index = len(self.tri_indices) - 1
+                self._process_custom_attributes(
+                    entity_index=tri_index,
+                    custom_attrs=custom_attributes,
+                    expected_frequency=Model.AttributeFrequency.TRIANGLE,
+                )
             return area
 
     def add_triangles(
         self,
-        i: list[int],
-        j: list[int],
-        k: list[int],
+        i: list[int] | nparray,
+        j: list[int] | nparray,
+        k: list[int] | nparray,
         tri_ke: list[float] | None = None,
         tri_ka: list[float] | None = None,
         tri_kd: list[float] | None = None,
         tri_drag: list[float] | None = None,
         tri_lift: list[float] | None = None,
+        custom_attributes: dict[str, Any] | None = None,
     ) -> list[float]:
         """Adds triangular FEM elements between groups of three particles in the system.
 
@@ -5106,6 +5326,12 @@ class ModelBuilder:
             i: The indices of the first particle
             j: The indices of the second particle
             k: The indices of the third particle
+            tri_ke: The elastic stiffness of the triangles. If None, the default value (:attr:`default_tri_ke`) is used.
+            tri_ka: The area stiffness of the triangles. If None, the default value (:attr:`default_tri_ka`) is used.
+            tri_kd: The damping stiffness of the triangles. If None, the default value (:attr:`default_tri_kd`) is used.
+            tri_drag: The drag coefficient of the triangles. If None, the default value (:attr:`default_tri_drag`) is used.
+            tri_lift: The lift coefficient of the triangles. If None, the default value (:attr:`default_tri_lift`) is used.
+            custom_attributes: Dictionary of custom attribute names to values.
 
         Return:
             The areas of the triangles
@@ -5116,9 +5342,10 @@ class ModelBuilder:
 
         """
         # compute basis for 2D rest pose
-        p = np.array(self.particle_q)[i]
-        q = np.array(self.particle_q)[j]
-        r = np.array(self.particle_q)[k]
+        q_ = np.asarray(self.particle_q)
+        p = q_[i]
+        q = q_[j]
+        r = q_[k]
 
         qp = q - p
         rp = r - p
@@ -5146,8 +5373,13 @@ class ModelBuilder:
         D[areas == 0.0] = np.eye(2)[None, ...]
         inv_D = np.linalg.inv(D)
 
-        inds = np.concatenate((i[valid_inds, None], j[valid_inds, None], k[valid_inds, None]), axis=-1)
+        i_ = np.asarray(i)
+        j_ = np.asarray(j)
+        k_ = np.asarray(k)
 
+        inds = np.concatenate((i_[valid_inds, None], j_[valid_inds, None], k_[valid_inds, None]), axis=-1)
+
+        tri_start = len(self.tri_indices)
         self.tri_indices.extend(inds.tolist())
         self.tri_poses.extend(inv_D[valid_inds].tolist())
         self.tri_activations.extend([0.0] * len(valid_inds))
@@ -5175,10 +5407,27 @@ class ModelBuilder:
         )
         areas = areas.tolist()
         self.tri_areas.extend(areas)
+
+        # Process custom attributes
+        if custom_attributes and len(valid_inds) > 0:
+            tri_indices = list(range(tri_start, tri_start + len(valid_inds)))
+            self._process_custom_attributes(
+                entity_index=tri_indices,
+                custom_attrs=custom_attributes,
+                expected_frequency=Model.AttributeFrequency.TRIANGLE,
+            )
         return areas
 
     def add_tetrahedron(
-        self, i: int, j: int, k: int, l: int, k_mu: float = 1.0e3, k_lambda: float = 1.0e3, k_damp: float = 0.0
+        self,
+        i: int,
+        j: int,
+        k: int,
+        l: int,
+        k_mu: float = 1.0e3,
+        k_lambda: float = 1.0e3,
+        k_damp: float = 0.0,
+        custom_attributes: dict[str, Any] | None = None,
     ) -> float:
         """Adds a tetrahedral FEM element between four particles in the system.
 
@@ -5193,6 +5442,7 @@ class ModelBuilder:
             k_mu: The first elastic Lame parameter
             k_lambda: The second elastic Lame parameter
             k_damp: The element's damping stiffness
+            custom_attributes: Dictionary of custom attribute names to values.
 
         Return:
             The volume of the tetrahedron
@@ -5224,6 +5474,15 @@ class ModelBuilder:
             self.tet_activations.append(0.0)
             self.tet_materials.append((k_mu, k_lambda, k_damp))
 
+            # Process custom attributes
+            if custom_attributes:
+                tet_index = len(self.tet_indices) - 1
+                self._process_custom_attributes(
+                    entity_index=tet_index,
+                    custom_attrs=custom_attributes,
+                    expected_frequency=Model.AttributeFrequency.TETRAHEDRON,
+                )
+
         return volume
 
     def add_edge(
@@ -5235,7 +5494,8 @@ class ModelBuilder:
         rest: float | None = None,
         edge_ke: float | None = None,
         edge_kd: float | None = None,
-    ) -> None:
+        custom_attributes: dict[str, Any] | None = None,
+    ) -> int:
         """Adds a bending edge element between two adjacent triangles in the cloth mesh, defined by four vertices.
 
         The bending energy model follows the discrete shell formulation from [Grinspun et al. 2003].
@@ -5249,6 +5509,10 @@ class ModelBuilder:
             rest: The rest angle across the edge in radians, if not specified it will be computed
             edge_ke: The bending stiffness coefficient
             edge_kd: The bending damping coefficient
+            custom_attributes: Dictionary of custom attribute names to values.
+
+        Return:
+            The index of the edge.
 
         Note:
             The edge lies between the particles indexed by 'k' and 'l' parameters with the opposing
@@ -5280,16 +5544,28 @@ class ModelBuilder:
         self.edge_rest_angle.append(rest)
         self.edge_rest_length.append(wp.length(x4 - x3))
         self.edge_bending_properties.append((edge_ke, edge_kd))
+        edge_index = len(self.edge_indices) - 1
+
+        # Process custom attributes
+        if custom_attributes:
+            self._process_custom_attributes(
+                entity_index=edge_index,
+                custom_attrs=custom_attributes,
+                expected_frequency=Model.AttributeFrequency.EDGE,
+            )
+
+        return edge_index
 
     def add_edges(
         self,
-        i,
-        j,
-        k,
-        l,
+        i: list[int],
+        j: list[int],
+        k: list[int],
+        l: list[int],
         rest: list[float] | None = None,
         edge_ke: list[float] | None = None,
         edge_kd: list[float] | None = None,
+        custom_attributes: dict[str, Any] | None = None,
     ) -> None:
         """Adds bending edge elements between two adjacent triangles in the cloth mesh, defined by four vertices.
 
@@ -5297,13 +5573,14 @@ class ModelBuilder:
         The bending stiffness is controlled by the `edge_ke` parameter, and the bending damping by the `edge_kd` parameter.
 
         Args:
-            i: The index of the first particle, i.e., opposite vertex 0
-            j: The index of the second particle, i.e., opposite vertex 1
-            k: The index of the third particle, i.e., vertex 0
-            l: The index of the fourth particle, i.e., vertex 1
+            i: The indices of the first particles, i.e., opposite vertex 0
+            j: The indices of the second particles, i.e., opposite vertex 1
+            k: The indices of the third particles, i.e., vertex 0
+            l: The indices of the fourth particles, i.e., vertex 1
             rest: The rest angles across the edges in radians, if not specified they will be computed
-            edge_ke: The bending stiffness coefficient
-            edge_kd: The bending damping coefficient
+            edge_ke: The bending stiffness coefficients
+            edge_kd: The bending damping coefficients
+            custom_attributes: Dictionary of custom attribute names to values.
 
         Note:
             The edge lies between the particles indexed by 'k' and 'l' parameters with the opposing
@@ -5311,17 +5588,27 @@ class ModelBuilder:
             winding: (i, k, l), (j, l, k).
 
         """
-        x3 = np.array(self.particle_q)[k]
-        x4 = np.array(self.particle_q)[l]
+        # Convert inputs to numpy arrays
+        i_ = np.asarray(i)
+        j_ = np.asarray(j)
+        k_ = np.asarray(k)
+        l_ = np.asarray(l)
+
+        # Cache particle positions as numpy array
+        particle_q_ = np.asarray(self.particle_q)
+        x3 = particle_q_[k_]
+        x4 = particle_q_[l_]
+        x4_minus_x3 = x4 - x3
+
         if rest is None:
-            rest = np.zeros_like(i, dtype=float)
-            valid_mask = (i != -1) & (j != -1)
+            rest = np.zeros_like(i_, dtype=float)
+            valid_mask = (i_ != -1) & (j_ != -1)
 
             # compute rest angle
-            x1_valid = np.array(self.particle_q)[i[valid_mask]]
-            x2_valid = np.array(self.particle_q)[j[valid_mask]]
-            x3_valid = np.array(self.particle_q)[k[valid_mask]]
-            x4_valid = np.array(self.particle_q)[l[valid_mask]]
+            x1_valid = particle_q_[i_[valid_mask]]
+            x2_valid = particle_q_[j_[valid_mask]]
+            x3_valid = particle_q_[k_[valid_mask]]
+            x4_valid = particle_q_[l_[valid_mask]]
 
             def normalized(a):
                 l = np.linalg.norm(a, axis=-1, keepdims=True)
@@ -5338,12 +5625,14 @@ class ModelBuilder:
             cos_theta = np.clip(dot(n1, n2), -1.0, 1.0)
             sin_theta = dot(np.cross(n1, n2), e)
             rest[valid_mask] = np.arctan2(sin_theta, cos_theta)
+            rest = rest.tolist()
 
-        inds = np.concatenate((i[:, None], j[:, None], k[:, None], l[:, None]), axis=-1)
+        inds = np.concatenate((i_[:, None], j_[:, None], k_[:, None], l_[:, None]), axis=-1)
 
+        edge_start = len(self.edge_indices)
         self.edge_indices.extend(inds.tolist())
-        self.edge_rest_angle.extend(rest.tolist())
-        self.edge_rest_length.extend(np.linalg.norm(x4 - x3, axis=1).tolist())
+        self.edge_rest_angle.extend(rest)
+        self.edge_rest_length.extend(np.linalg.norm(x4_minus_x3, axis=1).tolist())
 
         def init_if_none(arr, defaultValue):
             if arr is None:
@@ -5354,6 +5643,15 @@ class ModelBuilder:
         edge_kd = init_if_none(edge_kd, self.default_edge_kd)
 
         self.edge_bending_properties.extend(zip(edge_ke, edge_kd, strict=False))
+
+        # Process custom attributes
+        if custom_attributes and len(i) > 0:
+            edge_indices = list(range(edge_start, edge_start + len(i)))
+            self._process_custom_attributes(
+                entity_index=edge_indices,
+                custom_attrs=custom_attributes,
+                expected_frequency=Model.AttributeFrequency.EDGE,
+            )
 
     def add_cloth_grid(
         self,
@@ -5381,6 +5679,9 @@ class ModelBuilder:
         spring_ke: float | None = None,
         spring_kd: float | None = None,
         particle_radius: float | None = None,
+        custom_attributes_particles: dict[str, Any] | None = None,
+        custom_attributes_edges: dict[str, Any] | None = None,
+        custom_attributes_triangles: dict[str, Any] | None = None,
     ):
         """Helper to create a regular planar cloth grid
 
@@ -5437,8 +5738,6 @@ class ModelBuilder:
             vertices=vertices,
             indices=indices,
             density=density,
-            edge_callback=None,
-            face_callback=None,
             tri_ke=tri_ke,
             tri_ka=tri_ka,
             tri_kd=tri_kd,
@@ -5450,6 +5749,9 @@ class ModelBuilder:
             spring_ke=spring_ke,
             spring_kd=spring_kd,
             particle_radius=particle_radius,
+            custom_attributes_particles=custom_attributes_particles,
+            custom_attributes_triangles=custom_attributes_triangles,
+            custom_attributes_edges=custom_attributes_edges,
         )
 
         vertex_id = 0
@@ -5480,8 +5782,6 @@ class ModelBuilder:
         vertices: list[Vec3],
         indices: list[int],
         density: float,
-        edge_callback=None,
-        face_callback=None,
         tri_ke: float | None = None,
         tri_ka: float | None = None,
         tri_kd: float | None = None,
@@ -5493,6 +5793,10 @@ class ModelBuilder:
         spring_ke: float | None = None,
         spring_kd: float | None = None,
         particle_radius: float | None = None,
+        custom_attributes_particles: dict[str, Any] | None = None,
+        custom_attributes_edges: dict[str, Any] | None = None,
+        custom_attributes_triangles: dict[str, Any] | None = None,
+        custom_attributes_springs: dict[str, Any] | None = None,
     ) -> None:
         """Helper to create a cloth model from a regular triangle mesh
 
@@ -5506,12 +5810,14 @@ class ModelBuilder:
             vertices: A list of vertex positions
             indices: A list of triangle indices, 3 entries per-face
             density: The density per-area of the mesh
-            edge_callback: A user callback when an edge is created
-            face_callback: A user callback when a face is created
             particle_radius: The particle_radius which controls particle based collisions.
-        Note:
+            custom_attributes_particles: Dictionary of custom attribute names to values for the particles.
+            custom_attributes_edges: Dictionary of custom attribute names to values for the edges.
+            custom_attributes_triangles: Dictionary of custom attribute names to values for the triangles.
+            custom_attributes_springs: Dictionary of custom attribute names to values for the springs.
 
-            The mesh should be two manifold.
+        Note:
+            The mesh should be two-manifold.
         """
         tri_ke = tri_ke if tri_ke is not None else self.default_tri_ke
         tri_ka = tri_ka if tri_ka is not None else self.default_tri_ka
@@ -5538,7 +5844,11 @@ class ModelBuilder:
         rot_mat_np = np.array(wp.quat_to_matrix(rot), dtype=np.float32).reshape(3, 3)
         verts_3d_np = np.dot(vertices_np, rot_mat_np.T) + pos
         self.add_particles(
-            verts_3d_np.tolist(), [vel] * num_verts, mass=[0.0] * num_verts, radius=[particle_radius] * num_verts
+            verts_3d_np.tolist(),
+            [vel] * num_verts,
+            mass=[0.0] * num_verts,
+            radius=[particle_radius] * num_verts,
+            custom_attributes=custom_attributes_particles,
         )
 
         # triangles
@@ -5553,6 +5863,7 @@ class ModelBuilder:
             [tri_kd] * num_tris,
             [tri_drag] * num_tris,
             [tri_lift] * num_tris,
+            custom_attributes=custom_attributes_triangles,
         )
         for t in range(num_tris):
             area = areas[t]
@@ -5576,6 +5887,7 @@ class ModelBuilder:
             edge_indices[:, 3],
             edge_ke=[edge_ke] * len(edge_indices),
             edge_kd=[edge_kd] * len(edge_indices),
+            custom_attributes=custom_attributes_edges,
         )
 
         if add_springs:
@@ -5592,7 +5904,7 @@ class ModelBuilder:
                     spring_indices.add((min(i, j), max(i, j)))
 
             for i, j in spring_indices:
-                self.add_spring(i, j, spring_ke, spring_kd, control=0.0)
+                self.add_spring(i, j, spring_ke, spring_kd, control=0.0, custom_attributes=custom_attributes_springs)
 
     def add_particle_grid(
         self,
@@ -5609,7 +5921,8 @@ class ModelBuilder:
         jitter: float,
         radius_mean: float | None = None,
         radius_std: float = 0.0,
-        flags: int | None = None,
+        flags: list[int] | int | None = None,
+        custom_attributes: dict[str, Any] | None = None,
     ):
         """
         Adds a regular 3D grid of particles to the model.
@@ -5619,20 +5932,21 @@ class ModelBuilder:
         by its dimensions along each axis and the spacing between particles.
 
         Args:
-            pos (Vec3): The world-space position of the grid origin.
-            rot (Quat): The rotation to apply to the grid (as a quaternion).
-            vel (Vec3): The initial velocity to assign to each particle.
-            dim_x (int): Number of particles along the X axis.
-            dim_y (int): Number of particles along the Y axis.
-            dim_z (int): Number of particles along the Z axis.
-            cell_x (float): Spacing between particles along the X axis.
-            cell_y (float): Spacing between particles along the Y axis.
-            cell_z (float): Spacing between particles along the Z axis.
-            mass (float): Mass to assign to each particle.
-            jitter (float): Maximum random offset to apply to each particle position.
-            radius_mean (float, optional): Mean radius for particles. If None, uses the builder's default.
-            radius_std (float, optional): Standard deviation for particle radii. If > 0, radii are sampled from a normal distribution.
-            flags (int, optional): Flags to assign to each particle. If None, uses the builder's default.
+            pos: The world-space position of the grid origin.
+            rot: The rotation to apply to the grid (as a quaternion).
+            vel: The initial velocity to assign to each particle.
+            dim_x: Number of particles along the X axis.
+            dim_y: Number of particles along the Y axis.
+            dim_z: Number of particles along the Z axis.
+            cell_x: Spacing between particles along the X axis.
+            cell_y: Spacing between particles along the Y axis.
+            cell_z: Spacing between particles along the Z axis.
+            mass: Mass to assign to each particle.
+            jitter: Maximum random offset to apply to each particle position.
+            radius_mean: Mean radius for particles. If None, uses the builder's default.
+            radius_std: Standard deviation for particle radii. If > 0, radii are sampled from a normal distribution.
+            flags: Flags to assign to each particle. If None, uses the builder's default.
+            custom_attributes: Dictionary of custom attribute names to values for the particles.
 
         Returns:
             None
@@ -5664,12 +5978,34 @@ class ModelBuilder:
         if flags is not None:
             flags = [flags] * points.shape[0]
 
+        # Broadcast scalar custom attribute values to all particles
+        num_particles = points.shape[0]
+        broadcast_custom_attrs = None
+        if custom_attributes:
+            broadcast_custom_attrs = {}
+            for key, value in custom_attributes.items():
+                # Check if value is a sequence (but not string/bytes) or numpy array
+                is_array = isinstance(value, np.ndarray)
+                is_sequence = isinstance(value, Sequence) and not isinstance(value, (str, bytes))
+
+                if is_array or is_sequence:
+                    # Value is already a sequence/array - validate length
+                    if len(value) != num_particles:
+                        raise ValueError(
+                            f"Custom attribute '{key}' has {len(value)} values but {num_particles} particles in grid"
+                        )
+                    broadcast_custom_attrs[key] = list(value) if is_array else value
+                else:
+                    # Scalar value - broadcast to all particles
+                    broadcast_custom_attrs[key] = [value] * num_particles
+
         self.add_particles(
             pos=points.tolist(),
             vel=velocity.tolist(),
             mass=masses,
             radius=radii.tolist(),
             flags=flags,
+            custom_attributes=broadcast_custom_attrs,
         )
 
     def add_soft_grid(
@@ -5950,6 +6286,19 @@ class ModelBuilder:
                 joint = self.add_joint_free(child=body_id)
                 self.add_articulation([joint])
 
+    def request_contact_attributes(self, *attributes: str) -> None:
+        """
+        Request that specific contact attributes be allocated when creating a Contacts object from the finalized Model.
+
+        Args:
+            *attributes: Variable number of attribute names (strings).
+        """
+        # Local import to avoid adding more module-level dependencies in this large file.
+        from .contacts import Contacts  # noqa: PLC0415
+
+        Contacts.validate_extended_attributes(attributes)
+        self._requested_contact_attributes.update(attributes)
+
     def request_state_attributes(self, *attributes: str) -> None:
         """
         Request that specific state attributes be allocated when creating a State object from the finalized Model.
@@ -5962,7 +6311,7 @@ class ModelBuilder:
         # Local import to avoid adding more module-level dependencies in this large file.
         from .state import State  # noqa: PLC0415
 
-        State.validate_extended_state_attributes(attributes)
+        State.validate_extended_attributes(attributes)
         self._requested_state_attributes.update(attributes)
 
     def set_coloring(self, particle_color_groups):
@@ -6148,38 +6497,15 @@ class ModelBuilder:
                     f"Found worlds: {world_list}. Worlds must form a continuous sequence starting from 0."
                 )
 
-    def finalize(self, device: Devicelike | None = None, requires_grad: bool = False) -> Model:
+    def _validate_joints(self):
+        """Validate that all joints belong to an articulation, except for "loop joints".
+
+        Loop joints connect two bodies that are already reachable via articulated joints
+        (used to create kinematic loops, converted to equality constraints by MuJoCo solver).
+
+        Raises:
+            ValueError: If any validation check fails.
         """
-        Finalize the builder and create a concrete Model for simulation.
-
-        This method transfers all simulation data from the builder to device memory,
-        returning a Model object ready for simulation. It should be called after all
-        elements (particles, bodies, shapes, joints, etc.) have been added to the builder.
-
-        Args:
-            device: The simulation device to use (e.g., 'cpu', 'cuda'). If None, uses the current Warp device.
-            requires_grad: If True, enables gradient computation for the model (for differentiable simulation).
-
-        Returns:
-            Model: A fully constructed Model object containing all simulation data on the specified device.
-
-        Notes:
-            - Performs validation and correction of rigid body inertia and mass properties.
-            - Closes all start-index arrays (e.g., for muscles, joints, articulations) with sentinel values.
-            - Sets up all arrays and properties required for simulation, including particles, bodies, shapes,
-              joints, springs, muscles, constraints, and collision/contact data.
-        """
-        from .collide import count_rigid_contact_points  # noqa: PLC0415
-
-        # ensure the world count is set correctly
-        self.num_worlds = max(1, self.num_worlds)
-
-        # validate world ordering and contiguity
-        self._validate_world_ordering()
-
-        # validate all joints belong to an articulation, except for "loop joints"
-        # Loop joints connect two bodies that are already reachable via articulated joints
-        # (used to create kinematic loops, converted to equality constraints by MuJoCo solver)
         if self.joint_count > 0:
             # First, find all bodies reachable via articulated joints
             articulated_bodies = set()
@@ -6208,12 +6534,23 @@ class ModelBuilder:
                     + ("..." if len(orphan_joints) > 5 else "")
                 )
 
-        # warn if any shape has thickness > contact_margin (causes unstable contact behavior)
-        # Thickness is an outward offset from each shape's surface. AABBs are expanded by contact_margin.
-        # For proper broad phase detection, each shape must have contact_margin >= thickness.
-        # This ensures that when thickened surfaces are close (sum of thicknesses),
-        # the AABBs overlap (sum of margins >= sum of thicknesses).
-        # Only check shapes that participate in collisions (have COLLIDE_SHAPES or COLLIDE_PARTICLES flag).
+    def _validate_shapes(self) -> bool:
+        """Validate shape contact margins against thickness for stable broad phase detection.
+
+        Thickness is an outward offset from a shape's surface, while AABBs are expanded
+        by `contact_margin`. For reliable broad phase detection, each colliding shape
+        should satisfy `contact_margin >= thickness` so that thickened surfaces produce
+        overlapping AABBs.
+
+        This check only considers shapes that participate in collisions (with the
+        `COLLIDE_SHAPES` or `COLLIDE_PARTICLES` flag).
+
+        Warns:
+            UserWarning: If any colliding shape has `thickness > contact_margin`.
+
+        Returns:
+            bool: True if no shapes with thickness > contact_margin, False otherwise.
+        """
         collision_flags_mask = ShapeFlags.COLLIDE_SHAPES | ShapeFlags.COLLIDE_PARTICLES
         shapes_with_bad_margin = []
         for i in range(self.shape_count):
@@ -6235,6 +6572,260 @@ class ModelBuilder:
                 f"Affected shapes: {example_shapes}" + ("..." if len(shapes_with_bad_margin) > 5 else ""),
                 stacklevel=2,
             )
+        return len(shapes_with_bad_margin) == 0
+
+    def _build_world_starts(self):
+        """
+        Constructs the per-world entity start indices.
+
+        This method validates that the per-world start index lists for various entities
+        (particles, bodies, shapes, joints, articulations, equality constraints and joint
+        coordinates/DOFs/constraints) are cumulative and match the total counts of those
+        entities. Moreover, it appends the start of tail-end global entities and the
+        overall total counts to the end of each start index lists.
+
+        The format of the start index lists is as follows (where `*` can be `body`, `shape`, `joint`, etc.):
+            .. code-block:: python
+
+                world_*_start = [ start_world_0, start_world_1, ..., start_world_N , start_global_tail, total_count]
+
+        This allows retrieval of per-world counts using:
+            .. code-block:: python
+
+                global_*_count = start_world_0 + (total_count - start_global_tail)
+                world_*_count[w] = world_*_start[w + 1] - world_*_start[w]
+
+        e.g.
+            .. code-block:: python
+
+                body_world = [-1, -1, 0, 0, ..., 1, 1, ..., N - 1, N - 1, ..., -1, -1, -1, ...]
+                body_world_start = [2, 15, 25, ..., 50, 60, 72]
+                #          world :  -1 |  0 |  1   ... |  N-1 | -1 |  total
+        """
+        # List of all world starts of entities
+        world_entity_start_arrays = [
+            (self.particle_world_start, self.particle_count, self.particle_world, "particle"),
+            (self.body_world_start, self.body_count, self.body_world, "body"),
+            (self.shape_world_start, self.shape_count, self.shape_world, "shape"),
+            (self.joint_world_start, self.joint_count, self.joint_world, "joint"),
+            (self.articulation_world_start, self.articulation_count, self.articulation_world, "articulation"),
+            (
+                self.equality_constraint_world_start,
+                len(self.equality_constraint_type),
+                self.equality_constraint_world,
+                "equality constraint",
+            ),
+        ]
+
+        def build_entity_start_array(
+            entity_count: int, entity_world: list[int], world_entity_start: list[int], name: str
+        ):
+            # Ensure that entity_world has length equal to entity_count
+            if len(entity_world) != entity_count:
+                raise ValueError(
+                    f"World array for {name}s has incorrect length: expected {entity_count}, found {len(entity_world)}."
+                )
+
+            # Initialize world_entity_start with zeros
+            world_entity_start.clear()
+            world_entity_start.extend([0] * (self.num_worlds + 2))
+
+            # Count global entities at the front of the entity_world array
+            front_global_entity_count = 0
+            for w in entity_world:
+                if w == -1:
+                    front_global_entity_count += 1
+                else:
+                    break
+            world_entity_start[0] = front_global_entity_count
+
+            # Compute per-world cumulative counts
+            entity_world_np = np.asarray(entity_world, dtype=np.int32)
+            world_counts = np.bincount(entity_world_np[entity_world_np >= 0], minlength=self.num_worlds)
+            for w in range(self.num_worlds):
+                world_entity_start[w + 1] = world_entity_start[w] + int(world_counts[w])
+
+            # Set the last element to the total entity counts over all worlds in the model
+            world_entity_start[-1] = entity_count
+
+        # Check that all world offset indices are cumulative and match counts
+        for world_start_array, total_count, entity_world_array, name in world_entity_start_arrays:
+            # First build the start lists by appending tail-end global and total entity counts
+            build_entity_start_array(total_count, entity_world_array, world_start_array, name)
+
+            # Ensure the world_start array has length num_worlds + 2 (for global entities at start/end)
+            expected_length = self.num_worlds + 2
+            if len(world_start_array) != expected_length:
+                raise ValueError(
+                    f"World start indices for {name}s have incorrect length: "
+                    f"expected {expected_length}, found {len(world_start_array)}."
+                )
+
+            # Ensure that per-world start indices are non-decreasing and compute sum of per-world counts
+            sum_of_counts = world_start_array[0]
+            for w in range(self.num_worlds + 1):
+                start_idx = world_start_array[w]
+                end_idx = world_start_array[w + 1]
+                count = end_idx - start_idx
+                if count < 0:
+                    raise ValueError(
+                        f"Invalid world start indices for {name}s: world {w} has negative count ({count}). "
+                        f"Start index: {start_idx}, end index: {end_idx}."
+                    )
+                sum_of_counts += count
+
+            # Ensure the sum of per-world counts equals the total count
+            if sum_of_counts != total_count:
+                raise ValueError(
+                    f"Sum of per-world {name} counts does not equal total count: "
+                    f"expected {total_count}, found {sum_of_counts}."
+                )
+
+            # Ensure that the last entry equals the total count
+            if world_start_array[-1] != total_count:
+                raise ValueError(
+                    f"World start indices for {name}s do not match total count: "
+                    f"expected final index {total_count}, found {world_start_array[-1]}."
+                )
+
+        # List of world starts of joints spaces, i.e. coords/DOFs/constraints
+        world_joint_space_start_arrays = [
+            (self.joint_dof_world_start, self.joint_qd_start, self.joint_dof_count, "joint DOF"),
+            (self.joint_coord_world_start, self.joint_q_start, self.joint_coord_count, "joint coordinate"),
+            (self.joint_constraint_world_start, self.joint_cts_start, self.joint_constraint_count, "joint constraint"),
+        ]
+
+        def build_joint_space_start_array(
+            space_count: int, joint_space_start: list[int], world_space_start: list[int], name: str
+        ):
+            # Ensure that joint_space_start has length equal to self.joint_count
+            if len(joint_space_start) != self.joint_count:
+                raise ValueError(
+                    f"Joint start array for {name}s has incorrect length: "
+                    f"expected {self.joint_count}, found {len(joint_space_start)}."
+                )
+
+            # Initialize world_space_start with zeros
+            world_space_start.clear()
+            world_space_start.extend([0] * (self.num_worlds + 2))
+
+            # Extend joint_space_start with total count to enable computing per-world counts
+            joint_space_start_ext = copy.copy(joint_space_start)
+            joint_space_start_ext.append(space_count)
+
+            # Count global entities at the front of the entity_world array
+            front_global_space_count = 0
+            for j, w in enumerate(self.joint_world):
+                if w == -1:
+                    front_global_space_count += joint_space_start_ext[j + 1] - joint_space_start_ext[j]
+                else:
+                    break
+
+            # Compute per-world cumulative joint space counts to initialize world_space_start
+            for j, w in enumerate(self.joint_world):
+                if w >= 0:
+                    world_space_start[w + 1] += joint_space_start_ext[j + 1] - joint_space_start_ext[j]
+
+            # Convert per-world counts to cumulative start indices
+            world_space_start[0] += front_global_space_count
+            for w in range(self.num_worlds):
+                world_space_start[w + 1] += world_space_start[w]
+
+            # Add total (i.e. final) entity counts to the per-world start indices
+            world_space_start[-1] = space_count
+
+        # Check that all world offset indices are cumulative and match counts
+        for world_start_array, space_start_array, total_count, name in world_joint_space_start_arrays:
+            # First finalize the start array by appending tail-end global and total entity counts
+            build_joint_space_start_array(total_count, space_start_array, world_start_array, name)
+
+            # Ensure the world_start array has length num_worlds + 2 (for global entities at start/end)
+            expected_length = self.num_worlds + 2
+            if len(world_start_array) != expected_length:
+                raise ValueError(
+                    f"World start indices for {name}s have incorrect length: "
+                    f"expected {expected_length}, found {len(world_start_array)}."
+                )
+
+            # Ensure that per-world start indices are non-decreasing and compute sum of per-world counts
+            sum_of_counts = world_start_array[0]
+            for w in range(self.num_worlds + 1):
+                start_idx = world_start_array[w]
+                end_idx = world_start_array[w + 1]
+                count = end_idx - start_idx
+                if count < 0:
+                    raise ValueError(
+                        f"Invalid world start indices for {name}s: world {w} has negative count ({count}). "
+                        f"Start index: {start_idx}, end index: {end_idx}."
+                    )
+                sum_of_counts += count
+
+            # Ensure the sum of per-world counts equals the total count
+            if sum_of_counts != total_count:
+                raise ValueError(
+                    f"Sum of per-world {name} counts does not equal total count: "
+                    f"expected {total_count}, found {sum_of_counts}."
+                )
+
+            # Ensure that the last entry equals the total count
+            if world_start_array[-1] != total_count:
+                raise ValueError(
+                    f"World start indices for {name}s do not match total count: "
+                    f"expected final index {total_count}, found {world_start_array[-1]}."
+                )
+
+    def finalize(
+        self,
+        device: Devicelike | None = None,
+        requires_grad: bool = False,
+        skip_validation_worlds: bool = False,
+        skip_validation_joints: bool = False,
+        skip_validation_shapes: bool = False,
+    ) -> Model:
+        """
+        Finalize the builder and create a concrete :class:`~newton.Model` for simulation.
+
+        This method transfers all simulation data from the builder to device memory,
+        returning a Model object ready for simulation. It should be called after all
+        elements (particles, bodies, shapes, joints, etc.) have been added to the builder.
+
+        Args:
+            device: The simulation device to use (e.g., 'cpu', 'cuda'). If None, uses the current Warp device.
+            requires_grad: If True, enables gradient computation for the model (for differentiable simulation).
+            skip_validation_worlds: If True, skips validation of world ordering and contiguity. Default is False.
+            skip_validation_joints: If True, skips validation of joints belonging to an articulation. Default is False.
+            skip_validation_shapes: If True, skips validation of shapes having valid contact margins. Default is False.
+
+        Returns:
+            Model: A fully constructed Model object containing all simulation data on the specified device.
+
+        Notes:
+            - Performs validation and correction of rigid body inertia and mass properties.
+            - Closes all start-index arrays (e.g., for muscles, joints, articulations) with sentinel values.
+            - Sets up all arrays and properties required for simulation, including particles, bodies, shapes,
+              joints, springs, muscles, constraints, and collision/contact data.
+        """
+        from .collide import count_rigid_contact_points  # noqa: PLC0415
+
+        # ensure the world count is set correctly
+        self.num_worlds = max(1, self.num_worlds)
+
+        # validate world ordering and contiguity
+        if not skip_validation_worlds:
+            self._validate_world_ordering()
+
+        # validate joints belong to an articulation
+        if not skip_validation_joints:
+            self._validate_joints()
+
+        # validate shapes have valid contact margins
+        if not skip_validation_shapes:
+            self._validate_shapes()
+
+        # construct world starts by ensuring they are cumulative and appending
+        # tail-end global counts and sum total counts over the entire model.
+        # This method also performs relevant validation checks on the start.
+        self._build_world_starts()
 
         # construct particle inv masses
         ms = np.array(self.particle_mass, dtype=np.float32)
@@ -6246,6 +6837,7 @@ class ModelBuilder:
             # construct Model (non-time varying) data
 
             m = Model(device)
+            m.request_contact_attributes(*self._requested_contact_attributes)
             m.request_state_attributes(*self._requested_state_attributes)
             m.requires_grad = requires_grad
 
@@ -6330,8 +6922,82 @@ class ModelBuilder:
             )
             m.shape_contact_margin = wp.array(self.shape_contact_margin, dtype=wp.float32, requires_grad=requires_grad)
 
-            m.shape_collision_filter_pairs = set(self.shape_collision_filter_pairs)
+            m.shape_collision_filter_pairs = {
+                (min(s1, s2), max(s1, s2)) for s1, s2 in self.shape_collision_filter_pairs
+            }
             m.shape_collision_group = wp.array(self.shape_collision_group, dtype=wp.int32)
+
+            # ---------------------
+            # Compute local AABBs and voxel resolutions for contact reduction
+            local_aabb_lower = []
+            local_aabb_upper = []
+            voxel_resolution = []
+            voxel_budget = 100  # Maximum voxels per shape for contact reduction
+
+            # Cache per unique (mesh_id, scale) to avoid redundant AABB computation
+            # for instanced meshes (e.g., 256 robots sharing the same mesh sources)
+            mesh_aabb_cache = {}
+
+            for shape_type, shape_src, shape_scale in zip(
+                self.shape_type, self.shape_source, self.shape_scale, strict=True
+            ):
+                if shape_type == GeoType.MESH and shape_src is not None:
+                    # Use mesh id and scale as cache key
+                    cache_key = (id(shape_src), tuple(shape_scale))
+
+                    if cache_key in mesh_aabb_cache:
+                        # Reuse cached result
+                        aabb_lower, aabb_upper, nx, ny, nz = mesh_aabb_cache[cache_key]
+                    else:
+                        # Compute local AABB from mesh vertices
+                        vertices = shape_src.vertices
+                        aabb_lower = vertices.min(axis=0)
+                        aabb_upper = vertices.max(axis=0)
+
+                        # Apply scale to get the actual local-space bounds
+                        aabb_lower = aabb_lower * np.array(shape_scale)
+                        aabb_upper = aabb_upper * np.array(shape_scale)
+
+                        # Compute voxel resolution
+                        size = aabb_upper - aabb_lower
+                        size = np.maximum(size, 1e-6)  # Avoid division by zero
+
+                        # Target voxel size for approximately cubic voxels
+                        volume = size[0] * size[1] * size[2]
+                        v = (volume / voxel_budget) ** (1.0 / 3.0)
+                        v = max(v, 1e-6)
+
+                        # Initial resolution
+                        nx = max(1, round(size[0] / v))
+                        ny = max(1, round(size[1] / v))
+                        nz = max(1, round(size[2] / v))
+
+                        # Reduce until under budget (reduce largest axis first for more cubic voxels)
+                        while nx * ny * nz > voxel_budget:
+                            if nx >= ny and nx >= nz and nx > 1:
+                                nx -= 1
+                            elif ny >= nz and ny > 1:
+                                ny -= 1
+                            elif nz > 1:
+                                nz -= 1
+                            else:
+                                break
+
+                        # Cache the result
+                        mesh_aabb_cache[cache_key] = (aabb_lower, aabb_upper, nx, ny, nz)
+                else:
+                    # Non-mesh shapes: use a default 1x1x1 voxel grid (effectively no voxel binning)
+                    aabb_lower = np.array([-1.0, -1.0, -1.0])
+                    aabb_upper = np.array([1.0, 1.0, 1.0])
+                    nx, ny, nz = 1, 1, 1
+
+                local_aabb_lower.append(aabb_lower)
+                local_aabb_upper.append(aabb_upper)
+                voxel_resolution.append([nx, ny, nz])
+
+            m.shape_local_aabb_lower = wp.array(local_aabb_lower, dtype=wp.vec3, device=device)
+            m.shape_local_aabb_upper = wp.array(local_aabb_upper, dtype=wp.vec3, device=device)
+            m.shape_voxel_resolution = wp.array(voxel_resolution, dtype=wp.vec3i, device=device)
 
             # ---------------------
             # Compute SDFs for mesh shapes (per-shape opt-in via sdf_max_resolution, sdf_target_voxel_size or is_hydroelastic)
@@ -6659,6 +7325,7 @@ class ModelBuilder:
 
             # dynamics properties
             m.joint_armature = wp.array(self.joint_armature, dtype=wp.float32, requires_grad=requires_grad)
+            m.joint_act_mode = wp.array(self.joint_act_mode, dtype=wp.int32)
             m.joint_target_ke = wp.array(self.joint_target_ke, dtype=wp.float32, requires_grad=requires_grad)
             m.joint_target_kd = wp.array(self.joint_target_kd, dtype=wp.float32, requires_grad=requires_grad)
             m.joint_target_pos = wp.array(self.joint_target_pos, dtype=wp.float32, requires_grad=requires_grad)
@@ -6697,6 +7364,7 @@ class ModelBuilder:
             m.articulation_world = wp.array(self.articulation_world, dtype=wp.int32)
             m.max_joints_per_articulation = max_joints_per_articulation
 
+            # ---------------------
             # equality constraints
             m.equality_constraint_type = wp.array(self.equality_constraint_type, dtype=wp.int32)
             m.equality_constraint_body1 = wp.array(self.equality_constraint_body1, dtype=wp.int32)
@@ -6713,10 +7381,24 @@ class ModelBuilder:
             m.equality_constraint_enabled = wp.array(self.equality_constraint_enabled, dtype=wp.bool)
             m.equality_constraint_world = wp.array(self.equality_constraint_world, dtype=wp.int32)
 
+            # ---------------------
+            # per-world start indices
+            m.particle_world_start = wp.array(self.particle_world_start, dtype=wp.int32)
+            m.body_world_start = wp.array(self.body_world_start, dtype=wp.int32)
+            m.shape_world_start = wp.array(self.shape_world_start, dtype=wp.int32)
+            m.joint_world_start = wp.array(self.joint_world_start, dtype=wp.int32)
+            m.articulation_world_start = wp.array(self.articulation_world_start, dtype=wp.int32)
+            m.equality_constraint_world_start = wp.array(self.equality_constraint_world_start, dtype=wp.int32)
+            m.joint_dof_world_start = wp.array(self.joint_dof_world_start, dtype=wp.int32)
+            m.joint_coord_world_start = wp.array(self.joint_coord_world_start, dtype=wp.int32)
+            m.joint_constraint_world_start = wp.array(self.joint_constraint_world_start, dtype=wp.int32)
+
+            # ---------------------
             # counts
             m.joint_count = self.joint_count
             m.joint_dof_count = self.joint_dof_count
             m.joint_coord_count = self.joint_coord_count
+            m.joint_constraint_count = self.joint_constraint_count
             m.particle_count = len(self.particle_q)
             m.body_count = self.body_count
             m.shape_count = len(self.shape_type)
@@ -6801,24 +7483,36 @@ class ModelBuilder:
                 if isinstance(freq_key, str):
                     # Custom frequency: count determined by validated frequency count
                     count = custom_frequency_counts.get(freq_key, 0)
-                elif freq_key == ModelAttributeFrequency.ONCE:
+                elif freq_key == Model.AttributeFrequency.ONCE:
                     count = 1
-                elif freq_key == ModelAttributeFrequency.BODY:
+                elif freq_key == Model.AttributeFrequency.BODY:
                     count = m.body_count
-                elif freq_key == ModelAttributeFrequency.SHAPE:
+                elif freq_key == Model.AttributeFrequency.SHAPE:
                     count = m.shape_count
-                elif freq_key == ModelAttributeFrequency.JOINT:
+                elif freq_key == Model.AttributeFrequency.JOINT:
                     count = m.joint_count
-                elif freq_key == ModelAttributeFrequency.JOINT_DOF:
+                elif freq_key == Model.AttributeFrequency.JOINT_DOF:
                     count = m.joint_dof_count
-                elif freq_key == ModelAttributeFrequency.JOINT_COORD:
+                elif freq_key == Model.AttributeFrequency.JOINT_COORD:
                     count = m.joint_coord_count
-                elif freq_key == ModelAttributeFrequency.ARTICULATION:
+                elif freq_key == Model.AttributeFrequency.JOINT_CONSTRAINT:
+                    count = m.joint_constraint_count
+                elif freq_key == Model.AttributeFrequency.ARTICULATION:
                     count = m.articulation_count
-                elif freq_key == ModelAttributeFrequency.WORLD:
+                elif freq_key == Model.AttributeFrequency.WORLD:
                     count = m.num_worlds
-                elif freq_key == ModelAttributeFrequency.EQUALITY_CONSTRAINT:
+                elif freq_key == Model.AttributeFrequency.EQUALITY_CONSTRAINT:
                     count = m.equality_constraint_count
+                elif freq_key == Model.AttributeFrequency.PARTICLE:
+                    count = m.particle_count
+                elif freq_key == Model.AttributeFrequency.EDGE:
+                    count = m.edge_count
+                elif freq_key == Model.AttributeFrequency.TRIANGLE:
+                    count = m.tri_count
+                elif freq_key == Model.AttributeFrequency.TETRAHEDRON:
+                    count = m.tet_count
+                elif freq_key == Model.AttributeFrequency.SPRING:
+                    count = m.spring_count
                 else:
                     continue
 
@@ -6826,8 +7520,8 @@ class ModelBuilder:
                 if count == 0:
                     continue
 
-                wp_arr = custom_attr.build_array(count, device=device, requires_grad=requires_grad)
-                m.add_attribute(custom_attr.name, wp_arr, freq_key, custom_attr.assignment, custom_attr.namespace)
+                result = custom_attr.build_array(count, device=device, requires_grad=requires_grad)
+                m.add_attribute(custom_attr.name, result, freq_key, custom_attr.assignment, custom_attr.namespace)
 
             return m
 
@@ -6922,7 +7616,6 @@ class ModelBuilder:
                 if not self._test_world_and_group_pair(world1, world2, collision_group1, collision_group2):
                     continue
 
-                # Ensure canonical order (smaller_element, larger_element)
                 if s1 > s2:
                     shape_a, shape_b = s2, s1
                 else:
