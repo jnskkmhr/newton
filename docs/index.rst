@@ -1,3 +1,6 @@
+.. SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
+.. SPDX-License-Identifier: CC-BY-4.0
+
 .. raw:: html
 
    <meta http-equiv="refresh" content="0; url=guide/overview.html" />
@@ -14,7 +17,6 @@ Newton Physics
    Overview <guide/overview>
    guide/installation
    guide/visualization
-   guide/key-concepts
    guide/tutorials
    Development <guide/development>
 
@@ -25,6 +27,7 @@ Newton Physics
    
    Worlds <concepts/worlds>
    Articulations <concepts/articulations>
+   Mass and Inertia <concepts/mass_inertia>
    Sites <concepts/sites>
    Sensors <concepts/sensors>
    Conventions <concepts/conventions>
@@ -32,6 +35,7 @@ Newton Physics
    Custom Attributes <concepts/custom_attributes>
    Extended Attributes <concepts/extended_attributes>
    Collisions and Contacts <concepts/collisions>
+   Actuators <concepts/actuators>
    
 .. toctree::
    :maxdepth: 1
@@ -41,13 +45,13 @@ Newton Physics
    api/newton
    api/newton_geometry
    api/newton_ik
+   api/newton_math
    api/newton_selection
    api/newton_sensors
    api/newton_solvers
    api/newton_usd
    api/newton_utils
    api/newton_viewer
-
 
 .. toctree::
    :hidden:

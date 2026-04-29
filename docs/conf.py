@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -22,6 +10,7 @@ import datetime
 import importlib
 import inspect
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -41,33 +30,45 @@ github_version = os.environ.get("GITHUB_REF_NAME") or os.environ.get("CI_COMMIT_
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Newton Physics"
-copyright = f"{datetime.date.today().year}, The Newton Developers"
+copyright = f"{datetime.date.today().year}, The Newton Developers. Documentation licensed under CC-BY-4.0"
 author = "The Newton Developers"
 
-# Read version from _version.py
+# Read version from pyproject.toml
+# TODO: When minimum Python version is >=3.11, replace with:
+#   import tomllib
+#   with open(project_root / "pyproject.toml", "rb") as f:
+#       project_version = tomllib.load(f)["project"]["version"]
 project_root = Path(__file__).parent.parent
-version_file_path = project_root / "newton" / "_version.py"
 try:
-    # Get version from _version.py
-    version_globals: dict[str, str] = {}
-    with open(version_file_path, encoding="utf-8") as f:
-        exec(f.read(), version_globals)
-    project_version = version_globals["__version__"]
-    if not project_version:
-        raise ValueError("__version__ in _version.py is empty.")
-except FileNotFoundError:
-    print(f"Error: _version.py not found at {version_file_path}", file=sys.stderr)
-    sys.exit(1)
+    with open(project_root / "pyproject.toml", encoding="utf-8") as f:
+        content = f.read()
+    project_section = re.search(r"^\[project\]\s*\n(.*?)(?=^\[|\Z)", content, re.MULTILINE | re.DOTALL)
+    if not project_section:
+        raise ValueError("Could not find [project] section in pyproject.toml")
+    match = re.search(r'^version\s*=\s*"([^"]+)"', project_section.group(1), re.MULTILINE)
+    if not match:
+        raise ValueError("Could not find version in [project] section of pyproject.toml")
+    project_version = match.group(1)
 except Exception as e:
-    print(f"Error reading or parsing {version_file_path}: {e}", file=sys.stderr)
+    print(f"Error reading version from pyproject.toml: {e}", file=sys.stderr)
     sys.exit(1)
 
 release = project_version
 
+# -- Nitpicky mode -----------------------------------------------------------
+# Set nitpicky = True to warn about all broken cross-references (e.g. missing
+# intersphinx targets, typos in :class:/:func:/:attr: roles, etc.).  Useful for
+# auditing docs but noisy during regular development.
+nitpicky = False
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-# Add docs/_ext to Python import path so custom extensions can be imported
+# Add docs/ and docs/_ext to Python import path so custom extensions and
+# sibling scripts (e.g. generate_api) can be imported.
+_docs_path = str(Path(__file__).parent)
+if _docs_path not in sys.path:
+    sys.path.append(_docs_path)
 _ext_path = Path(__file__).parent / "_ext"
 if str(_ext_path) not in sys.path:
     sys.path.append(str(_ext_path))
@@ -113,8 +114,55 @@ exclude_patterns = [
     "sphinx-env",
     "**/site-packages/**",
     "**/lib/**",
-    "tutorials/**/*.ipynb",
 ]
+
+
+def _ensure_pandoc_on_path() -> str | None:
+    """Return a usable pandoc executable path, preferring the bundled docs dependency."""
+
+    # Try the bundled pypandoc_binary first so local docs builds work out of
+    # the box even when a stale or incompatible system pandoc is on PATH.
+    try:
+        import pypandoc  # noqa: PLC0415
+
+        bundled_path = Path(pypandoc.get_pandoc_path())
+        search_dir = bundled_path.parent
+        if search_dir.is_dir():
+            resolved_path = shutil.which("pandoc", path=str(search_dir))
+            if resolved_path is not None:
+                existing_path = os.environ.get("PATH", "")
+                os.environ["PATH"] = str(Path(resolved_path).parent) + os.pathsep + existing_path
+                os.environ.setdefault("PYPANDOC_PANDOC", resolved_path)
+                return resolved_path
+    except (ImportError, OSError):
+        pass
+
+    # Fall back to whatever pandoc is already on PATH.
+    return shutil.which("pandoc")
+
+
+# nbsphinx requires pandoc to convert Jupyter notebooks.  When pandoc is not
+# installed we exclude the notebook tutorials so the rest of the docs can still
+# be built locally without a hard error.  CI workflows install pandoc explicitly
+# so published docs always include the tutorials.  Prefer the bundled
+# ``pypandoc_binary`` executable when available so local docs builds work out of
+# the box in the docs environment.
+#
+# Set NEWTON_REQUIRE_PANDOC=1 to turn the missing-pandoc warning into an error
+# (used in CI to guarantee tutorials are never silently skipped).
+pandoc_path = _ensure_pandoc_on_path()
+if pandoc_path is None:
+    if os.environ.get("NEWTON_REQUIRE_PANDOC", "") == "1":
+        raise RuntimeError(
+            "pandoc is required but not found. Install pandoc "
+            "(https://pandoc.org/installing.html) or unset NEWTON_REQUIRE_PANDOC."
+        )
+    exclude_patterns.append("tutorials/**")
+    print(
+        "WARNING: pandoc not found - Jupyter notebook tutorials will be "
+        "skipped.  Install pandoc (https://pandoc.org/installing.html) to "
+        "build the complete documentation."
+    )
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -122,7 +170,22 @@ intersphinx_mapping = {
     "jax": ("https://docs.jax.dev/en/latest", None),
     "pytorch": ("https://docs.pytorch.org/docs/stable", None),
     "warp": ("https://nvidia.github.io/warp", None),
+    "usd": ("https://docs.omniverse.nvidia.com/kit/docs/pxr-usd-api/latest", None),
 }
+
+# Map short USD type names (from ``from pxr import Usd``) to their fully-qualified
+# ``pxr.*`` paths so intersphinx can resolve them against the USD inventory.
+# Note: this only affects annotations processed by autodoc, not autosummary stubs.
+autodoc_type_aliases = {
+    "Usd.Prim": "pxr.Usd.Prim",
+    "Usd.Stage": "pxr.Usd.Stage",
+    "UsdGeom.XformCache": "pxr.UsdGeom.XformCache",
+    "UsdGeom.Mesh": "pxr.UsdGeom.Mesh",
+    "UsdShade.Material": "pxr.UsdShade.Material",
+    "UsdShade.Shader": "pxr.UsdShade.Shader",
+    "State": "newton.State",
+}
+
 
 source_suffix = {
     ".rst": "restructuredtext",
@@ -134,15 +197,13 @@ extlinks = {
 }
 
 doctest_global_setup = """
+import warnings
 from typing import Any
 import numpy as np
 import warp as wp
 import newton
 
-# Suppress warnings by setting warp_showwarning to an empty function
-def empty_warning(*args, **kwargs):
-    pass
-wp.utils.warp_showwarning = empty_warning
+warnings.filterwarnings("ignore")
 
 wp.config.quiet = True
 wp.init()
@@ -157,12 +218,14 @@ autodoc_preserve_defaults = True
 
 autodoc_typehints_description_target = "documented"
 
+toc_object_entries_show_parents = "hide"
+
 autodoc_default_options = {
     "members": True,
     "member-order": "groupwise",
     "special-members": "__init__",
     "undoc-members": False,
-    "exclude-members": "__weakref__",
+    "exclude-members": "__weakref__, State",
     "imported-members": True,
     "autosummary": True,
 }
@@ -207,11 +270,42 @@ html_theme_options = {
         "text": f"Newton Physics <span style='font-size: 0.8em; color: #888;'>({release})</span>",
         "alt_text": "Newton Physics Logo",
     },
+    # Keep the right-hand page TOC on by default, but remove it on the
+    # solver API page where several wide comparison tables benefit from the
+    # extra content width.
+    "secondary_sidebar_items": {
+        "**": ["page-toc", "edit-this-page", "sourcelink"],
+        "api/newton_solvers": [],
+    },
     # "primary_sidebar_end": ["indices.html", "sidebar-ethical-ads.html"],
 }
 
 
 html_sidebars = {"**": ["sidebar-nav-bs.html"], "index": ["sidebar-nav-bs.html"]}
+
+# Version switcher configuration for multi-version docs on GitHub Pages
+# See: https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
+
+# Determine if we're in a CI build and which version
+_is_ci = os.environ.get("GITHUB_ACTIONS") == "true"
+_is_release = os.environ.get("GITHUB_REF", "").startswith("refs/tags/v")
+
+# Configure version switcher
+html_theme_options["switcher"] = {
+    "json_url": "https://newton-physics.github.io/newton/switcher.json",
+    "version_match": release if _is_release else "dev",
+}
+
+# Add version switcher to navbar
+html_theme_options["navbar_end"] = ["theme-switcher", "version-switcher", "navbar-icon-links"]
+
+# Footer configuration — show copyright (includes CC-BY-4.0 notice)
+html_theme_options["footer_start"] = ["copyright"]
+html_theme_options["footer_end"] = ["theme-version"]
+
+# Disable switcher JSON validation during local builds (file not accessible locally)
+if not _is_ci:
+    html_theme_options["check_switcher"] = False
 
 # -- Math configuration -------------------------------------------------------
 
@@ -366,5 +460,9 @@ def _on_builder_inited(_app: Any) -> None:
 
 
 def setup(app: Any) -> None:
-    # Copy on build init so `_static/viser/index.html` is always present in the built site.
+    # Regenerate API .rst files so builds always reflect the current public API.
+    from generate_api import generate_all  # noqa: PLC0415
+
+    generate_all()
+
     app.connect("builder-inited", _on_builder_inited)

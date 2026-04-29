@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 ###########################################################################
 # Example Cable Twist
@@ -33,11 +21,11 @@ import newton.examples
 
 @wp.kernel
 def spin_first_capsules_kernel(
-    body_indices: wp.array(dtype=wp.int32),
-    twist_rates: wp.array(dtype=float),  # radians per second per body
+    body_indices: wp.array[wp.int32],
+    twist_rates: wp.array[float],  # radians per second per body
     dt: float,
-    body_q0: wp.array(dtype=wp.transform),
-    body_q1: wp.array(dtype=wp.transform),
+    body_q0: wp.array[wp.transform],
+    body_q1: wp.array[wp.transform],
 ):
     """Apply continuous twist to the first segment of each cable."""
     tid = wp.tid()
@@ -75,10 +63,9 @@ class Example:
             twisting_angle: Total twist in radians around capsule axis (0 = no twist).
 
         Returns:
-            Tuple of (points, edge_indices, quaternions):
-            - points: List of segment endpoints in world space (num_elements + 1).
-            - edge_indices: Flattened array of edge connectivity (2*num_elements). (Not used by `add_rod()`.)
-            - quaternions: List of capsule orientations using parallel transport (num_elements).
+            Tuple of (points, quaternions):
+            - points: List of polyline points in world space (num_elements + 1).
+            - quaternions: Per-segment orientations using parallel transport (num_elements).
         """
         if pos is None:
             pos = wp.vec3()
@@ -116,54 +103,10 @@ class Example:
             z = 0.0
             points.append(pos + wp.vec3(x, y, z))
 
-        # Create edge indices connecting consecutive points
-        edge_indices = []
-        for i in range(num_elements):
-            edge_indices.extend([i, i + 1])
-        edge_indices = np.array(edge_indices, dtype=np.int32)
+        edge_q = newton.utils.create_parallel_transport_cable_quaternions(points, twist_total=float(twisting_angle))
+        return points, edge_q
 
-        # Create quaternions using parallel transport with cumulative twist distribution
-        edge_q = []
-        if num_elements > 0:
-            # Capsule internal axis is +Z
-            local_axis = wp.vec3(0.0, 0.0, 1.0)
-
-            # Parallel transport: maintain smooth rotational continuity
-            from_direction = local_axis
-
-            # Distribute total twist incrementally along the cable
-            angle_step = twisting_angle / num_elements if num_elements > 0 else 0.0
-
-            for i in range(num_elements):
-                p0 = points[i]
-                p1 = points[i + 1]
-
-                # Current segment direction
-                to_direction = wp.normalize(p1 - p0)
-
-                # Directional transport
-                dq_dir = wp.quat_between_vectors(from_direction, to_direction)
-
-                if i == 0:
-                    base_quaternion = dq_dir
-                else:
-                    base_quaternion = wp.mul(dq_dir, edge_q[i - 1])
-
-                # Apply incremental twist around the current segment direction
-                if twisting_angle != 0.0:
-                    twist_rot = wp.quat_from_axis_angle(to_direction, angle_step)
-                    final_quaternion = wp.mul(twist_rot, base_quaternion)
-                else:
-                    final_quaternion = base_quaternion
-
-                edge_q.append(final_quaternion)
-
-                # Update transport direction
-                from_direction = to_direction
-
-        return points, edge_indices, edge_q
-
-    def __init__(self, viewer, args=None):
+    def __init__(self, viewer, args):
         # Store viewer and arguments
         self.viewer = viewer
         self.args = args
@@ -173,8 +116,8 @@ class Example:
         self.frame_dt = 1.0 / self.fps
         self.sim_time = 0.0
         self.sim_substeps = 10
-        self.sim_iterations = 2
-        self.update_step_interval = 5
+        self.sim_iterations = 5
+        self.update_step_interval = 10
         self.sim_dt = self.frame_dt / self.sim_substeps
 
         # Cable parameters
@@ -183,9 +126,10 @@ class Example:
         self.cable_length = self.num_elements * segment_length
         cable_radius = 0.02
 
-        # Stiffness sweep (increasing) for bend stiffness
-        bend_stiffness_values = [1.0e1, 1.0e2, 1.0e3]
         stretch_stiffness = 1.0e6
+
+        # Stiffness sweep (increasing) for bend stiffness
+        bend_stiffness_values = [1.0e2, 1.0e3, 1.0e4]
 
         # All cables start untwisted, will be spun dynamically
         self.num_cables = len(bend_stiffness_values)
@@ -195,7 +139,7 @@ class Example:
 
         # Set default material properties before adding any shapes
         builder.default_shape_cfg.ke = 1.0e4  # Contact stiffness
-        builder.default_shape_cfg.kd = 1.0e-1  # Contact damping
+        builder.default_shape_cfg.kd = 0.0
         builder.default_shape_cfg.mu = 1.0e0  # Friction coefficient
 
         kinematic_body_indices = []
@@ -213,7 +157,7 @@ class Example:
             # Cables start at ground level (z=0) to lay flat on ground
             start_pos = wp.vec3(-self.cable_length * 0.25, y_pos, cable_radius)
 
-            cable_points, _, cable_edge_q = self.create_cable_geometry_with_turns(
+            cable_points, cable_edge_q = self.create_cable_geometry_with_turns(
                 pos=start_pos,
                 num_elements=self.num_elements,
                 length=self.cable_length,
@@ -224,11 +168,10 @@ class Example:
                 positions=cable_points,
                 quaternions=cable_edge_q,
                 radius=cable_radius,
+                stretch_stiffness=stretch_stiffness,
                 bend_stiffness=bend_stiffness,
                 bend_damping=1.0e-2,
-                stretch_stiffness=stretch_stiffness,
-                stretch_damping=1.0e-4,
-                key=f"cable_{i}",
+                label=f"cable_{i}",
             )
 
             # Fix the first body to make it kinematic
@@ -255,15 +198,13 @@ class Example:
         # Finalize model
         self.model = builder.finalize()
 
-        self.solver = newton.solvers.SolverVBD(self.model, iterations=self.sim_iterations, friction_epsilon=0.1)
+        self.solver = newton.solvers.SolverVBD(self.model, iterations=self.sim_iterations)
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
         self.control = self.model.control()
 
-        # Create collision pipeline (default: unified)
-        self.collision_pipeline = newton.examples.create_collision_pipeline(self.model, args)
-        self.contacts = self.model.collide(self.state_0, collision_pipeline=self.collision_pipeline)
+        self.contacts = self.model.contacts()
 
         self.viewer.set_model(self.model)
 
@@ -298,15 +239,12 @@ class Example:
             # Apply forces to the model
             self.viewer.apply_forces(self.state_0)
 
-            # Decide whether to refresh solver history (anchors used for long-range damping)
-            # and recompute contacts on this substep, using a configurable cadence.
-            update_step_history = (substep % self.update_step_interval) == 0
+            # Collision detection and contact refresh cadence.
+            refresh_contacts = (substep % self.update_step_interval) == 0
+            if refresh_contacts:
+                self.model.collide(self.state_0, self.contacts)
 
-            # Collide for contact detection
-            if update_step_history:
-                self.contacts = self.model.collide(self.state_0, collision_pipeline=self.collision_pipeline)
-
-            self.solver.set_rigid_history_update(update_step_history)
+            self.solver.set_rigid_history_update(refresh_contacts)
             self.solver.step(
                 self.state_0,
                 self.state_1,

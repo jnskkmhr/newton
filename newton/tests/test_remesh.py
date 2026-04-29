@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """Test the remeshing functionality (PointCloudExtractor and SurfaceReconstructor).
 
@@ -29,6 +17,7 @@ import unittest
 import numpy as np
 import warp as wp
 
+import newton
 from newton._src.geometry.hashtable import hashtable_find_or_insert
 from newton._src.geometry.remesh import (
     PointCloudExtractor,
@@ -38,7 +27,6 @@ from newton._src.geometry.remesh import (
     compute_camera_basis,
     compute_voxel_key,
 )
-from newton.geometry import create_box_mesh
 
 # Check if Open3D is available for reconstruction tests
 OPEN3D_AVAILABLE = importlib.util.find_spec("open3d") is not None
@@ -56,7 +44,16 @@ def create_unit_cube_mesh(center: np.ndarray | None = None) -> tuple[np.ndarray,
     Returns:
         Tuple of (vertices, indices) where vertices is (8, 3) and indices is (36,).
     """
-    vertices, indices = create_box_mesh((0.5, 0.5, 0.5))
+    mesh = newton.Mesh.create_box(
+        0.5,
+        0.5,
+        0.5,
+        duplicate_vertices=False,
+        compute_normals=False,
+        compute_uvs=False,
+        compute_inertia=False,
+    )
+    vertices, indices = mesh.vertices, mesh.indices
     if center is not None:
         vertices = vertices + np.array(center, dtype=np.float32)
     return vertices, indices
@@ -474,15 +471,15 @@ class TestVoxelHashGrid(unittest.TestCase):
             point: wp.vec3,
             normal: wp.vec3,
             inv_voxel_size: float,
-            keys: wp.array(dtype=wp.uint64),
-            active_slots: wp.array(dtype=wp.int32),
-            sum_pos_x: wp.array(dtype=wp.float32),
-            sum_pos_y: wp.array(dtype=wp.float32),
-            sum_pos_z: wp.array(dtype=wp.float32),
-            sum_norm_x: wp.array(dtype=wp.float32),
-            sum_norm_y: wp.array(dtype=wp.float32),
-            sum_norm_z: wp.array(dtype=wp.float32),
-            counts: wp.array(dtype=wp.int32),
+            keys: wp.array[wp.uint64],
+            active_slots: wp.array[wp.int32],
+            sum_pos_x: wp.array[wp.float32],
+            sum_pos_y: wp.array[wp.float32],
+            sum_pos_z: wp.array[wp.float32],
+            sum_norm_x: wp.array[wp.float32],
+            sum_norm_y: wp.array[wp.float32],
+            sum_norm_z: wp.array[wp.float32],
+            counts: wp.array[wp.int32],
         ):
             key = compute_voxel_key(point, inv_voxel_size)
             idx = hashtable_find_or_insert(key, keys, active_slots)
@@ -516,7 +513,6 @@ class TestVoxelHashGrid(unittest.TestCase):
                 grid.counts,
             ],
         )
-        wp.synchronize()
 
         self.assertEqual(grid.get_num_voxels(), 1)
 
@@ -558,18 +554,18 @@ class TestVoxelHashGrid(unittest.TestCase):
 
         @wp.kernel
         def accumulate_points(
-            points: wp.array(dtype=wp.vec3),
-            normals: wp.array(dtype=wp.vec3),
+            points: wp.array[wp.vec3],
+            normals: wp.array[wp.vec3],
             inv_voxel_size: float,
-            keys: wp.array(dtype=wp.uint64),
-            active_slots: wp.array(dtype=wp.int32),
-            sum_pos_x: wp.array(dtype=wp.float32),
-            sum_pos_y: wp.array(dtype=wp.float32),
-            sum_pos_z: wp.array(dtype=wp.float32),
-            sum_norm_x: wp.array(dtype=wp.float32),
-            sum_norm_y: wp.array(dtype=wp.float32),
-            sum_norm_z: wp.array(dtype=wp.float32),
-            counts: wp.array(dtype=wp.int32),
+            keys: wp.array[wp.uint64],
+            active_slots: wp.array[wp.int32],
+            sum_pos_x: wp.array[wp.float32],
+            sum_pos_y: wp.array[wp.float32],
+            sum_pos_z: wp.array[wp.float32],
+            sum_norm_x: wp.array[wp.float32],
+            sum_norm_y: wp.array[wp.float32],
+            sum_norm_z: wp.array[wp.float32],
+            counts: wp.array[wp.int32],
         ):
             tid = wp.tid()
             point = points[tid]
@@ -609,7 +605,6 @@ class TestVoxelHashGrid(unittest.TestCase):
                 grid.counts,
             ],
         )
-        wp.synchronize()
 
         # All points should fall in the same voxel (voxel_size=1.0, all coords in [0,1))
         self.assertEqual(grid.get_num_voxels(), 1)
@@ -660,18 +655,18 @@ class TestVoxelHashGrid(unittest.TestCase):
 
         @wp.kernel
         def accumulate_points(
-            points: wp.array(dtype=wp.vec3),
-            normals: wp.array(dtype=wp.vec3),
+            points: wp.array[wp.vec3],
+            normals: wp.array[wp.vec3],
             inv_voxel_size: float,
-            keys: wp.array(dtype=wp.uint64),
-            active_slots: wp.array(dtype=wp.int32),
-            sum_pos_x: wp.array(dtype=wp.float32),
-            sum_pos_y: wp.array(dtype=wp.float32),
-            sum_pos_z: wp.array(dtype=wp.float32),
-            sum_norm_x: wp.array(dtype=wp.float32),
-            sum_norm_y: wp.array(dtype=wp.float32),
-            sum_norm_z: wp.array(dtype=wp.float32),
-            counts: wp.array(dtype=wp.int32),
+            keys: wp.array[wp.uint64],
+            active_slots: wp.array[wp.int32],
+            sum_pos_x: wp.array[wp.float32],
+            sum_pos_y: wp.array[wp.float32],
+            sum_pos_z: wp.array[wp.float32],
+            sum_norm_x: wp.array[wp.float32],
+            sum_norm_y: wp.array[wp.float32],
+            sum_norm_z: wp.array[wp.float32],
+            counts: wp.array[wp.int32],
         ):
             tid = wp.tid()
             point = points[tid]
@@ -706,7 +701,6 @@ class TestVoxelHashGrid(unittest.TestCase):
                 grid.counts,
             ],
         )
-        wp.synchronize()
 
         # Should have 3 separate voxels
         self.assertEqual(grid.get_num_voxels(), 3)
@@ -726,10 +720,10 @@ class TestVoxelHashGrid(unittest.TestCase):
         @wp.kernel
         def add_point(
             inv_voxel_size: float,
-            keys: wp.array(dtype=wp.uint64),
-            active_slots: wp.array(dtype=wp.int32),
-            sum_pos_x: wp.array(dtype=wp.float32),
-            counts: wp.array(dtype=wp.int32),
+            keys: wp.array[wp.uint64],
+            active_slots: wp.array[wp.int32],
+            sum_pos_x: wp.array[wp.float32],
+            counts: wp.array[wp.int32],
         ):
             point = wp.vec3(0.5, 0.5, 0.5)
             key = compute_voxel_key(point, inv_voxel_size)
@@ -749,7 +743,6 @@ class TestVoxelHashGrid(unittest.TestCase):
                 grid.counts,
             ],
         )
-        wp.synchronize()
 
         self.assertEqual(grid.get_num_voxels(), 1)
 
@@ -789,18 +782,18 @@ class TestVoxelHashGrid(unittest.TestCase):
 
         @wp.kernel
         def accumulate_points(
-            points: wp.array(dtype=wp.vec3),
-            normals: wp.array(dtype=wp.vec3),
+            points: wp.array[wp.vec3],
+            normals: wp.array[wp.vec3],
             inv_voxel_size: float,
-            keys: wp.array(dtype=wp.uint64),
-            active_slots: wp.array(dtype=wp.int32),
-            sum_pos_x: wp.array(dtype=wp.float32),
-            sum_pos_y: wp.array(dtype=wp.float32),
-            sum_pos_z: wp.array(dtype=wp.float32),
-            sum_norm_x: wp.array(dtype=wp.float32),
-            sum_norm_y: wp.array(dtype=wp.float32),
-            sum_norm_z: wp.array(dtype=wp.float32),
-            counts: wp.array(dtype=wp.int32),
+            keys: wp.array[wp.uint64],
+            active_slots: wp.array[wp.int32],
+            sum_pos_x: wp.array[wp.float32],
+            sum_pos_y: wp.array[wp.float32],
+            sum_pos_z: wp.array[wp.float32],
+            sum_norm_x: wp.array[wp.float32],
+            sum_norm_y: wp.array[wp.float32],
+            sum_norm_z: wp.array[wp.float32],
+            counts: wp.array[wp.int32],
         ):
             tid = wp.tid()
             point = points[tid]
@@ -835,7 +828,6 @@ class TestVoxelHashGrid(unittest.TestCase):
                 grid.counts,
             ],
         )
-        wp.synchronize()
 
         # Should have 3 separate voxels
         self.assertEqual(grid.get_num_voxels(), 3)
@@ -892,18 +884,18 @@ class TestVoxelHashGrid(unittest.TestCase):
 
         @wp.kernel
         def accumulate_points(
-            points: wp.array(dtype=wp.vec3),
-            normals: wp.array(dtype=wp.vec3),
+            points: wp.array[wp.vec3],
+            normals: wp.array[wp.vec3],
             inv_voxel_size: float,
-            keys: wp.array(dtype=wp.uint64),
-            active_slots: wp.array(dtype=wp.int32),
-            sum_pos_x: wp.array(dtype=wp.float32),
-            sum_pos_y: wp.array(dtype=wp.float32),
-            sum_pos_z: wp.array(dtype=wp.float32),
-            sum_norm_x: wp.array(dtype=wp.float32),
-            sum_norm_y: wp.array(dtype=wp.float32),
-            sum_norm_z: wp.array(dtype=wp.float32),
-            counts: wp.array(dtype=wp.int32),
+            keys: wp.array[wp.uint64],
+            active_slots: wp.array[wp.int32],
+            sum_pos_x: wp.array[wp.float32],
+            sum_pos_y: wp.array[wp.float32],
+            sum_pos_z: wp.array[wp.float32],
+            sum_norm_x: wp.array[wp.float32],
+            sum_norm_y: wp.array[wp.float32],
+            sum_norm_z: wp.array[wp.float32],
+            counts: wp.array[wp.int32],
         ):
             tid = wp.tid()
             point = points[tid]
@@ -938,7 +930,6 @@ class TestVoxelHashGrid(unittest.TestCase):
                 grid.counts,
             ],
         )
-        wp.synchronize()
 
         # Points at 0.0 and 0.099 should be in one voxel, 0.1 in another
         # So we expect 2 voxels
@@ -1083,7 +1074,7 @@ class TestRemeshUnifiedAPI(unittest.TestCase):
     def test_remesh_mesh_poisson(self):
         """Test remesh_mesh() with method='poisson' using Mesh-based API."""
         import newton  # noqa: PLC0415
-        from newton.geometry import remesh_mesh  # noqa: PLC0415
+        from newton.utils import remesh_mesh  # noqa: PLC0415
 
         vertices, indices = create_unit_cube_mesh()
 

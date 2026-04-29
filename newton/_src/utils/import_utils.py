@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 
@@ -23,7 +11,7 @@ import warp as wp
 from ..sim.builder import ModelBuilder
 
 
-def parse_warp_value_from_string(value: str, warp_dtype: Any, default: Any = None) -> Any:
+def string_to_warp(value: str, warp_dtype: Any, default: Any = None) -> Any:
     """
     Parse a Warp value from a string. This is useful for parsing values from XML files.
     For example, "1.0 2.0 3.0" will be parsed as wp.vec3(1.0, 2.0, 3.0).
@@ -143,7 +131,7 @@ def parse_custom_attributes(
             def transform(
                 x: str, _context: dict[str, Any] | None, dtype: Any = attr.dtype, default: Any = attr.default
             ) -> Any:
-                return parse_warp_value_from_string(x, dtype, default)
+                return string_to_warp(x, dtype, default)
 
             transformer = transform
 
@@ -151,7 +139,11 @@ def parse_custom_attributes(
             name = attr.name
         dict_value = dictlike.get(name)
         if dict_value is not None:
-            out[attr.key] = transformer(dict_value, context)
+            value = transformer(dict_value, context)
+            if value is None:
+                # Treat None as "undefined" so defaults are applied later.
+                continue
+            out[attr.key] = value
     return out
 
 
@@ -184,6 +176,33 @@ def sanitize_name(name: str) -> str:
         The sanitized name with invalid characters replaced by underscores.
     """
     return name.replace("-", "_")
+
+
+def should_show_collider(
+    force_show_colliders: bool,
+    has_visual_shapes: bool,
+    parse_visuals_as_colliders: bool = False,
+) -> bool:
+    """Determine whether collision shapes should have the VISIBLE flag.
+
+    Collision shapes are shown (VISIBLE flag) when explicitly forced, when
+    visual shapes are used as colliders, or when no visual shapes exist for
+    the owning body (so there is something to render). Otherwise, collision
+    shapes get only COLLIDE_SHAPES and are controlled by the viewer's
+    "Show Collision" toggle.
+
+    Args:
+        force_show_colliders: User explicitly wants collision shapes visible.
+        has_visual_shapes: Whether the body/link has visual (non-collision) shapes.
+        parse_visuals_as_colliders: Whether visual geometry is repurposed as collision geometry.
+
+    Returns:
+        True if the collision shape should carry the VISIBLE flag; False if it should
+        be hidden by default and only revealed via the viewer's "Show Collision" toggle.
+    """
+    if force_show_colliders or parse_visuals_as_colliders:
+        return True
+    return not has_visual_shapes
 
 
 def is_xml_content(source: str) -> bool:

@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """Common definitions for types and constants."""
 
@@ -63,15 +51,18 @@ Vec3 = list[float] | tuple[float, float, float] | wp.vec3
 """A 3D vector represented as a list or tuple of 3 floats."""
 Vec4 = list[float] | tuple[float, float, float, float] | wp.vec4
 """A 4D vector represented as a list or tuple of 4 floats."""
+Vec6 = list[float] | tuple[float, float, float, float, float, float] | wp.spatial_vector
+"""A 6D vector represented as a list or tuple of 6 floats or a ``warp.spatial_vector``."""
+
 Quat = list[float] | tuple[float, float, float, float] | wp.quat
 """A quaternion represented as a list or tuple of 4 floats (in XYZW order)."""
+Mat22 = list[float] | wp.mat22
+"""A 2x2 matrix represented as a list of 4 floats or a ``warp.mat22``."""
 Mat33 = list[float] | wp.mat33
 """A 3x3 matrix represented as a list of 9 floats or a ``warp.mat33``."""
 Transform = tuple[Vec3, Quat] | wp.transform
 """A 3D transformation represented as a tuple of 3D translation and rotation quaternion (in XYZW order)."""
 
-# type alias for numpy arrays
-nparray = np.ndarray[Any, np.dtype[Any]]
 
 # Warp vector types
 vec5 = wp.types.vector(length=5, dtype=wp.float32)
@@ -103,10 +94,10 @@ class Axis(IntEnum):
         Convert a string representation of an axis ("x", "y", or "z") to the corresponding Axis enum member.
 
         Args:
-            axis_str (str): The axis as a string. Should be "x", "y", or "z" (case-insensitive).
+            axis_str: The axis as a string. Should be "x", "y", or "z" (case-insensitive).
 
         Returns:
-            Axis: The corresponding Axis enum member.
+            The corresponding Axis enum member.
 
         Raises:
             ValueError: If the input string does not correspond to a valid axis.
@@ -126,10 +117,10 @@ class Axis(IntEnum):
         Convert a value of various types to an Axis enum member.
 
         Args:
-            value (AxisType): The value to convert. Can be an Axis, str, or int-like.
+            value: The value to convert. Can be an Axis, str, or int-like.
 
         Returns:
-            Axis: The corresponding Axis enum member.
+            The corresponding Axis enum member.
 
         Raises:
             TypeError: If the value cannot be converted to an Axis.
@@ -168,7 +159,7 @@ class Axis(IntEnum):
         Return the axis as a 3D unit vector.
 
         Returns:
-            tuple[float, float, float]: The unit vector corresponding to the axis.
+            The unit vector corresponding to the axis.
         """
         if self == Axis.X:
             return (1.0, 0.0, 0.0)
@@ -182,9 +173,15 @@ class Axis(IntEnum):
         Return the axis as a warp.vec3 unit vector.
 
         Returns:
-            wp.vec3: The unit vector corresponding to the axis.
+            The unit vector corresponding to the axis.
         """
         return wp.vec3(*self.to_vector())
+
+    def quat_between_axes(self, other: Axis) -> wp.quat:
+        """
+        Return the quaternion between two axes.
+        """
+        return wp.quat_between_vectors(self.to_vec3(), other.to_vec3())
 
 
 AxisType = Axis | Literal["X", "Y", "Z"] | Literal[0, 1, 2] | int | str
@@ -196,7 +193,7 @@ def axis_to_vec3(axis: AxisType | Vec3) -> wp.vec3:
     if isinstance(axis, list | tuple | np.ndarray):
         return wp.vec3(*axis)
     elif wp.types.type_is_vector(type(axis)):
-        return wp.vec3(*axis)
+        return axis
     else:
         return Axis.from_any(axis).to_vec3()
 
@@ -206,6 +203,7 @@ __all__ = [
     "Axis",
     "AxisType",
     "Devicelike",
+    "Mat22",
     "Mat33",
     "Quat",
     "Sequence",
@@ -213,6 +211,7 @@ __all__ = [
     "Vec2",
     "Vec3",
     "Vec4",
+    "Vec6",
     "flag_to_int",
     "override",
     "vec5",

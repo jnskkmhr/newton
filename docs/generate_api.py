@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """Generate concise API .rst files for selected modules.
 
@@ -53,8 +41,10 @@ sys.path.insert(0, str(REPO_ROOT))
 # Modules for which we want API pages.  Feel free to modify.
 MODULES: list[str] = [
     "newton",
+    "newton.actuators",
     "newton.geometry",
     "newton.ik",
+    "newton.math",
     "newton.selection",
     "newton.sensors",
     "newton.solvers",
@@ -174,14 +164,21 @@ def write_module_page(mod_name: str) -> None:
     title = mod_name
     underline = "=" * len(title)
 
-    lines: list[str] = [title, underline, ""]
+    lines: list[str] = [
+        ".. SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers",
+        ".. SPDX-License-Identifier: CC-BY-4.0",
+        "",
+        title,
+        underline,
+        "",
+    ]
 
     # Module docstring if available
     doc = (module.__doc__ or "").strip()
     if doc:
         lines.extend([doc, ""])
 
-    lines.extend([f".. currentmodule:: {mod_name}", ""])
+    lines.extend([f".. py:module:: {mod_name}", f".. currentmodule:: {mod_name}", ""])
 
     # Render a simple bullet list of submodules (no autosummary/toctree) to
     # avoid generating stub pages that can cause duplicate descriptions.
@@ -263,13 +260,13 @@ def write_module_page(mod_name: str) -> None:
 
             # unpack the warp scalar value, we can remove this
             # when the warp.types.scalar_base supports __str__()
-            if type(value) in wp.types.scalar_types:
+            if wp.types.is_scalar(value):
                 value = getattr(value, "value", value)
 
             lines.extend(
                 [
-                    f"   * - {const}",
-                    f"     - {value}",
+                    f"   * - ``{const}``",
+                    f"     - ``{value}``",
                 ]
             )
 
@@ -282,10 +279,13 @@ def write_module_page(mod_name: str) -> None:
 
 
 # -----------------------------------------------------------------------------
-# Script entry
+# Public entry point
 # -----------------------------------------------------------------------------
 
-if __name__ == "__main__":
+
+def generate_all() -> None:
+    """Regenerate all API ``.rst`` files under :data:`OUTPUT_DIR`."""
+
     # delete previously generated files
     shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
 
@@ -294,4 +294,12 @@ if __name__ == "__main__":
 
     for mod in all_modules:
         write_module_page(mod)
+
+
+# -----------------------------------------------------------------------------
+# Script entry
+# -----------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    generate_all()
     print("\nDone. Add docs/api/index.rst to your TOC or glob it in.")

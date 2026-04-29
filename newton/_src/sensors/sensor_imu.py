@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """IMU Sensor - measures accelerations and angular velocities at sensor sites."""
 
@@ -20,22 +8,23 @@ import warp as wp
 from ..geometry.flags import ShapeFlags
 from ..sim.model import Model
 from ..sim.state import State
+from ..utils.selection import match_labels
 
 
 @wp.kernel
 def compute_sensor_imu_kernel(
-    gravity: wp.array(dtype=wp.vec3),
-    body_world: wp.array(dtype=wp.int32),
-    body_com: wp.array(dtype=wp.vec3),
-    shape_body: wp.array(dtype=int),
-    shape_transform: wp.array(dtype=wp.transform),
-    sensor_sites: wp.array(dtype=int),
-    body_q: wp.array(dtype=wp.transform),
-    body_qd: wp.array(dtype=wp.spatial_vector),
-    body_qdd: wp.array(dtype=wp.spatial_vector),
+    gravity: wp.array[wp.vec3],
+    body_world: wp.array[wp.int32],
+    body_com: wp.array[wp.vec3],
+    shape_body: wp.array[int],
+    shape_transform: wp.array[wp.transform],
+    sensor_sites: wp.array[int],
+    body_q: wp.array[wp.transform],
+    body_qd: wp.array[wp.spatial_vector],
+    body_qdd: wp.array[wp.spatial_vector],
     # output
-    accelerometer: wp.array(dtype=wp.vec3),
-    gyroscope: wp.array(dtype=wp.vec3),
+    accelerometer: wp.array[wp.vec3],
+    gyroscope: wp.array[wp.vec3],
 ):
     """Compute accelerations and angular velocities at sensor sites."""
     sensor_idx = wp.tid()
@@ -76,37 +65,59 @@ def compute_sensor_imu_kernel(
 
 
 class SensorIMU:
-    """Inertial Measurement Unit Sensor.
+    """Inertial Measurement Unit sensor.
 
-    This sensor measures the acceleration and angular velocity at the sites given.
+    Measures linear acceleration (specific force) and angular velocity at the
+    given sites. Each site defines an IMU frame; outputs are expressed in that
+    frame.
 
-    Body Accelerations Attribute:
-    This sensor requires the extended state attribute ``body_qdd`` to be computed by the solver.  This requires
-    a solver that supports computing ``body_qdd``, and requesting ``body_qdd`` from the model before calling
-    ``model.state()``. Instantiating the SensorIMU will automatically request ``body_qdd`` from the model by default.
+    This sensor requires the extended state attribute ``body_qdd``. By default,
+    constructing the sensor requests ``body_qdd`` from the model so that
+    subsequent ``model.state()`` calls allocate it automatically. The solver
+    must also support computing ``body_qdd``
+    (e.g. :class:`~newton.solvers.SolverMuJoCo`).
+
+    The ``sites`` parameter accepts label patterns -- see :ref:`label-matching`.
 
     Example:
-        Create a SensorIMU for a model with a list of site indices::
 
-            # Obtain shape indices (e.g. via selection or direct indexing)
-            sensor_sites = [0, 1, 2]  # indices of sites to attach IMU sensors
+        .. testcode::
 
-            model = Model()
-            sensor = SensorIMU(model, sensor_sites)
+            import warp as wp
+            import newton
+            from newton.sensors import SensorIMU
+
+            builder = newton.ModelBuilder()
+            builder.add_ground_plane()
+            body = builder.add_body(xform=wp.transform((0, 0, 1), wp.quat_identity()))
+            builder.add_shape_sphere(body, radius=0.1)
+            builder.add_site(body, label="imu_0")
+            model = builder.finalize()
+
+            imu = SensorIMU(model, sites="imu_*")
+            solver = newton.solvers.SolverMuJoCo(model)
             state = model.state()
 
-            # Update after step()
-            sensor.update(state)
+            # after solver step
+            solver.step(state, state, None, None, dt=1.0 / 60.0)
+            imu.update(state)
+            acc = imu.accelerometer.numpy()
+            gyro = imu.gyroscope.numpy()
     """
 
-    accelerometer: wp.array(dtype=wp.vec3)
-    """Linear acceleration readings in sensor frame, shape (n_sensors,)."""
+    accelerometer: wp.array[wp.vec3]
+    """Linear acceleration readings [m/s²] in sensor frame, shape ``(n_sensors,)``."""
 
-    gyroscope: wp.array(dtype=wp.vec3)
-    """Angular velocity readings in sensor frame, shape (n_sensors,)."""
+    gyroscope: wp.array[wp.vec3]
+    """Angular velocity readings [rad/s] in sensor frame, shape ``(n_sensors,)``."""
 
     def __init__(
-        self, model: Model, sites: list[int], verbose: bool | None = None, request_state_attributes: bool = True
+        self,
+        model: Model,
+        sites: str | list[str] | list[int],
+        *,
+        verbose: bool | None = None,
+        request_state_attributes: bool = True,
     ):
         """Initialize SensorIMU.
 
@@ -115,19 +126,24 @@ class SensorIMU:
 
         Args:
             model: The model to use.
-            sites: List of site indices where IMU sensors are attached.
+            sites: List of site indices, single pattern to match against site
+                labels, or list of patterns where any one matches.
             verbose: If True, print details. If None, uses ``wp.config.verbose``.
             request_state_attributes: If True (default), transparently request the extended state attribute ``body_qdd`` from the model.
                 If False, ``model`` is not modified and the attribute must be requested elsewhere before calling ``model.state()``.
         Raises:
-            ValueError: If invalid sites are passed.
+            ValueError: If no labels match or invalid sites are passed.
         """
 
         self.model = model
         self.verbose = verbose if verbose is not None else wp.config.verbose
 
+        original_sites = sites
+        sites = match_labels(model.shape_label, sites)
         if not sites:
-            raise ValueError("sites must not be empty")
+            if isinstance(original_sites, list) and len(original_sites) == 0:
+                raise ValueError("'sites' must not be empty")
+            raise ValueError(f"No sites matched the given pattern {original_sites!r}")
 
         # request acceleration state attribute
         if request_state_attributes:

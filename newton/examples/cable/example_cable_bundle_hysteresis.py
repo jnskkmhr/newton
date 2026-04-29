@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 ###########################################################################
 # Example Cable Bundle Hysteresis
@@ -24,9 +12,6 @@
 #
 ###########################################################################
 
-import argparse
-import math
-
 import numpy as np
 import warp as wp
 
@@ -36,16 +21,16 @@ import newton.examples
 
 @wp.kernel
 def move_obstacles_triwave(
-    bodies: wp.array(dtype=int),
-    init_y: wp.array(dtype=float),
-    init_z: wp.array(dtype=float),
+    bodies: wp.array[int],
+    init_y: wp.array[float],
+    init_z: wp.array[float],
     amp_scale: float,
     period: float,
-    t: wp.array(dtype=float),
+    t: wp.array[float],
     stop_time: float,
     release_time: float,
-    body_q0: wp.array(dtype=wp.transform),
-    body_q1: wp.array(dtype=wp.transform),
+    body_q0: wp.array[wp.transform],
+    body_q1: wp.array[wp.transform],
 ):
     """Move obstacles in a triangle wave pattern in Y direction with phase transitions."""
     i = wp.tid()
@@ -93,7 +78,7 @@ def move_obstacles_triwave(
 
 
 @wp.kernel
-def advance_time(t: wp.array(dtype=float), dt: float):
+def advance_time(t: wp.array[float], dt: float):
     """Advance a device-side time accumulator (single-threaded, graph-capture friendly)."""
     i = wp.tid()
     if i == 0:
@@ -101,7 +86,7 @@ def advance_time(t: wp.array(dtype=float), dt: float):
 
 
 class Example:
-    def create_bundle_positions(self, num_cables: int, cable_radius: float, gap_multiplier: float):
+    def bundle_start_offsets_yz(self, num_cables: int, cable_radius: float, gap_multiplier: float):
         """Create cross-sectional positions for cable bundle arrangement.
 
         Arranges cables in a compact bundle with one central cable and others in
@@ -177,7 +162,7 @@ class Example:
         self.frame_dt = 1.0 / self.fps
         self.sim_time = 0.0
         self.sim_substeps = 10
-        self.sim_iterations = 2
+        self.sim_iterations = 5
         self.update_step_interval = 10
         self.sim_dt = self.frame_dt / self.sim_substeps
 
@@ -187,22 +172,22 @@ class Example:
         self.cable_length = 4.0
         self.cable_radius = 0.02
         self.cable_gap_multiplier = 1.1
-        bend_stiffness = 1.0e1
+        bend_stiffness = 1.0e2
         bend_damping = 5.0e-2
-        stretch_stiffness = 1.0e6
-        stretch_damping = 0.0
 
         builder = newton.ModelBuilder()
-        builder.rigid_contact_margin = 0.05
+        builder.rigid_gap = 0.05
 
-        # Register solver-specific custom attributes (Dahl plasticity parameters live on the Model)
-        newton.solvers.SolverVBD.register_custom_attributes(builder)
+        # Register solver-specific custom attributes (Dahl plasticity parameters live on the Model).
+        # SolverVBD auto-detects these and enables Dahl friction when present.
+        if with_dahl:
+            newton.solvers.SolverVBD.register_custom_attributes(builder)
         builder.gravity = -9.81
 
         # Set default material properties for cables (cable-to-cable contact)
-        builder.default_shape_cfg.ke = 1.0e6  # Contact stiffness
-        builder.default_shape_cfg.kd = 1.0e-2  # Contact damping
-        builder.default_shape_cfg.mu = 0.6  # Friction coefficient
+        builder.default_shape_cfg.ke = 1.0e5  # Contact stiffness
+        builder.default_shape_cfg.kd = 0.0
+        builder.default_shape_cfg.mu = 1.0e0  # Friction coefficient
 
         # Bundle layout: align cable center with obstacle center
         # Obstacles span x in [0.5, 2.5], center at x=1.5
@@ -212,26 +197,21 @@ class Example:
         # Obstacle capsule center is at z=0.3, align cable with this
         start_z = 0.3
 
-        # Cable geometry along +X axis (requires 90-degree rotation from +Z to +X)
-        q_cable = wp.quat_from_axis_angle(wp.vec3(0.0, 1.0, 0.0), math.pi / 2.0)
-
         # Create bundle cross-section layout
-        bundle_positions = self.create_bundle_positions(self.num_cables, self.cable_radius, self.cable_gap_multiplier)
+        bundle_positions = self.bundle_start_offsets_yz(self.num_cables, self.cable_radius, self.cable_gap_multiplier)
 
         # Build each cable in the bundle
         for i in range(self.num_cables):
             off_y, off_z = bundle_positions[i]
             cable_start = wp.vec3(start_x, start_y + off_y, start_z + off_z)
 
-            # Create straight cable points along X axis
-            points = []
-            for j in range(self.num_elements + 1):
-                t = float(j) / float(self.num_elements)
-                p = cable_start + wp.vec3(self.cable_length * t, 0.0, 0.0)
-                points.append(p)
-
-            # All segments use same orientation (straight cable)
-            quats = [q_cable for _ in range(self.num_elements)]
+            points, quats = newton.utils.create_straight_cable_points_and_quaternions(
+                start=cable_start,
+                direction=wp.vec3(1.0, 0.0, 0.0),
+                length=float(self.cable_length),
+                num_segments=int(self.num_elements),
+                twist_total=0.0,
+            )
 
             _rod_bodies, _rod_joints = builder.add_rod(
                 positions=points,
@@ -239,16 +219,12 @@ class Example:
                 radius=self.cable_radius,
                 bend_stiffness=bend_stiffness,
                 bend_damping=bend_damping,
-                stretch_stiffness=stretch_stiffness,
-                stretch_damping=stretch_damping,
-                key=f"bundle_cable_{i}",
+                label=f"bundle_cable_{i}",
             )
 
         # Create moving obstacles (capsules arranged along X axis)
         obstacle_cfg = newton.ModelBuilder.ShapeConfig(
             density=builder.default_shape_cfg.density,
-            ke=1.0e6,
-            kd=1.0e-2,
             kf=builder.default_shape_cfg.kf,
             ka=builder.default_shape_cfg.ka,
             mu=0.0,  # Frictionless obstacles
@@ -290,8 +266,6 @@ class Example:
         # Add ground plane
         ground_cfg = newton.ModelBuilder.ShapeConfig(
             density=builder.default_shape_cfg.density,
-            ke=1.0e4,
-            kd=1.0e-1,
             kf=builder.default_shape_cfg.kf,
             ka=builder.default_shape_cfg.ka,
             mu=2.5,
@@ -306,17 +280,14 @@ class Example:
         self.model = builder.finalize()
 
         # Author Dahl friction parameters (per-joint) via custom model attributes.
-        # These are read by SolverVBD when rigid_enable_dahl_friction=True.
-        if hasattr(self.model, "vbd"):
+        # SolverVBD auto-detects these and enables Dahl friction when present.
+        if with_dahl and hasattr(self.model, "vbd"):
             self.model.vbd.dahl_eps_max.fill_(float(eps_max))
             self.model.vbd.dahl_tau.fill_(float(tau))
 
-        # Create VBD solver with Dahl friction (cable bending hysteresis)
         self.solver = newton.solvers.SolverVBD(
             self.model,
             iterations=self.sim_iterations,
-            friction_epsilon=0.1,
-            rigid_enable_dahl_friction=with_dahl,
         )
 
         # Initialize states and contacts
@@ -324,9 +295,7 @@ class Example:
         self.state_1 = self.model.state()
         self.control = self.model.control()
 
-        # Create collision pipeline (default: unified)
-        self.collision_pipeline = newton.examples.create_collision_pipeline(self.model, args)
-        self.contacts = self.model.collide(self.state_0, collision_pipeline=self.collision_pipeline)
+        self.contacts = self.model.contacts()
         self.viewer.set_model(self.model)
 
         # Obstacle kinematics parameters
@@ -400,15 +369,12 @@ class Example:
                 device=self.solver.device,
             )
 
-            # Decide whether to refresh rigid solver history (anchors used for long-range joint damping)
-            # and recompute contacts on this substep, using a configurable cadence.
-            update_step_history = (substep % self.update_step_interval) == 0
+            # Collision detection and contact refresh cadence.
+            refresh_contacts = (substep % self.update_step_interval) == 0
+            if refresh_contacts:
+                self.model.collide(self.state_0, self.contacts)
 
-            # Collide for contact detection
-            if update_step_history:
-                self.contacts = self.model.collide(self.state_0, collision_pipeline=self.collision_pipeline)
-
-            self.solver.set_rigid_history_update(update_step_history)
+            self.solver.set_rigid_history_update(refresh_contacts)
             self.solver.step(
                 self.state_0,
                 self.state_1,
@@ -442,28 +408,29 @@ class Example:
         """Test cable bundle hysteresis simulation for stability and correctness (called after simulation)."""
         pass
 
+    @staticmethod
+    def create_parser():
+        parser = newton.examples.create_parser()
+        parser.add_argument("--segments", type=int, default=40, help="Number of cable segments")
+        parser.add_argument("--no-dahl", action="store_true", help="Disable Dahl friction (purely elastic)")
+        parser.add_argument("--eps-max", type=float, default=2.0, help="Maximum plastic strain [rad]")
+        parser.add_argument("--tau", type=float, default=0.1, help="Memory decay length [rad]")
+        return parser
+
 
 if __name__ == "__main__":
-    # Parse arguments and initialize viewer
-    viewer, args = newton.examples.init()
-
-    # Parse example-specific arguments for Dahl friction experimentation
-    parser = argparse.ArgumentParser(description="Cable bundle hysteresis with Dahl friction")
-    parser.add_argument("--segments", type=int, default=40, help="Number of cable segments")
-    parser.add_argument("--no-dahl", action="store_true", help="Disable Dahl friction (purely elastic)")
-    parser.add_argument("--eps-max", type=float, default=2.0, help="Maximum plastic strain [rad]")
-    parser.add_argument("--tau", type=float, default=0.1, help="Memory decay length [rad]")
-    cli, _ = parser.parse_known_args()
+    parser = Example.create_parser()
+    viewer, args = newton.examples.init(parser)
 
     # Create example and run
     example = Example(
         viewer,
         args,
         num_cables=7,
-        segments=cli.segments,
-        with_dahl=not cli.no_dahl and cli.eps_max > 0.0 and cli.tau > 0.0,
-        eps_max=cli.eps_max,
-        tau=cli.tau,
+        segments=args.segments,
+        with_dahl=not args.no_dahl and args.eps_max > 0.0 and args.tau > 0.0,
+        eps_max=args.eps_max,
+        tau=args.tau,
     )
 
     newton.examples.run(example, args)

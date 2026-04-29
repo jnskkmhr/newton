@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """Point cloud extraction and surface reconstruction for mesh repair.
 
@@ -47,7 +35,7 @@ Example:
     Remesh a problematic mesh to get a clean, watertight version::
 
         import numpy as np
-        from newton._src.geometry.remesh import PointCloudExtractor, SurfaceReconstructor
+        from ..geometry.remesh import PointCloudExtractor, SurfaceReconstructor
 
         # Load your mesh (vertices: Nx3, indices: Mx3 or flattened)
         vertices = np.array(...)  # your mesh vertices
@@ -83,8 +71,8 @@ import warnings
 import numpy as np
 import warp as wp
 
-from newton._src.geometry.hashtable import HashTable, hashtable_find_or_insert
-from newton._src.geometry.types import Mesh
+from ..geometry.hashtable import HashTable, hashtable_find_or_insert
+from ..geometry.types import Mesh
 
 # -----------------------------------------------------------------------------
 # Morton encoding for sparse voxel grid (21 bits per axis = 63 bits total)
@@ -193,16 +181,16 @@ def _accumulate_point_kernel(
     normal: wp.vec3,
     inv_voxel_size: wp.float32,
     # Hash table arrays
-    keys: wp.array(dtype=wp.uint64),
-    active_slots: wp.array(dtype=wp.int32),
+    keys: wp.array[wp.uint64],
+    active_slots: wp.array[wp.int32],
     # Accumulator arrays
-    sum_positions_x: wp.array(dtype=wp.float32),
-    sum_positions_y: wp.array(dtype=wp.float32),
-    sum_positions_z: wp.array(dtype=wp.float32),
-    sum_normals_x: wp.array(dtype=wp.float32),
-    sum_normals_y: wp.array(dtype=wp.float32),
-    sum_normals_z: wp.array(dtype=wp.float32),
-    counts: wp.array(dtype=wp.int32),
+    sum_positions_x: wp.array[wp.float32],
+    sum_positions_y: wp.array[wp.float32],
+    sum_positions_z: wp.array[wp.float32],
+    sum_normals_x: wp.array[wp.float32],
+    sum_normals_y: wp.array[wp.float32],
+    sum_normals_z: wp.array[wp.float32],
+    counts: wp.array[wp.int32],
 ):
     """Accumulate a single point into the voxel grid (for testing)."""
     key = compute_voxel_key(point, inv_voxel_size)
@@ -222,19 +210,19 @@ def _accumulate_point_kernel(
 
 @wp.kernel
 def _finalize_voxels_kernel(
-    active_slots: wp.array(dtype=wp.int32),
+    active_slots: wp.array[wp.int32],
     num_active: wp.int32,
     # Accumulator arrays (input)
-    sum_positions_x: wp.array(dtype=wp.float32),
-    sum_positions_y: wp.array(dtype=wp.float32),
-    sum_positions_z: wp.array(dtype=wp.float32),
-    sum_normals_x: wp.array(dtype=wp.float32),
-    sum_normals_y: wp.array(dtype=wp.float32),
-    sum_normals_z: wp.array(dtype=wp.float32),
-    counts: wp.array(dtype=wp.int32),
+    sum_positions_x: wp.array[wp.float32],
+    sum_positions_y: wp.array[wp.float32],
+    sum_positions_z: wp.array[wp.float32],
+    sum_normals_x: wp.array[wp.float32],
+    sum_normals_y: wp.array[wp.float32],
+    sum_normals_z: wp.array[wp.float32],
+    counts: wp.array[wp.int32],
     # Output arrays
-    out_points: wp.array(dtype=wp.vec3),
-    out_normals: wp.array(dtype=wp.vec3),
+    out_points: wp.array[wp.vec3],
+    out_normals: wp.array[wp.vec3],
 ):
     """Finalize voxel averages and write to output arrays."""
     tid = wp.tid()
@@ -674,24 +662,24 @@ def raycast_orthographic_kernel(
     # Voxel hash grid parameters
     inv_voxel_size: wp.float32,
     # Hash table arrays
-    keys: wp.array(dtype=wp.uint64),
-    active_slots: wp.array(dtype=wp.int32),
+    keys: wp.array[wp.uint64],
+    active_slots: wp.array[wp.int32],
     # Accumulator arrays
-    sum_positions_x: wp.array(dtype=wp.float32),
-    sum_positions_y: wp.array(dtype=wp.float32),
-    sum_positions_z: wp.array(dtype=wp.float32),
-    sum_normals_x: wp.array(dtype=wp.float32),
-    sum_normals_y: wp.array(dtype=wp.float32),
-    sum_normals_z: wp.array(dtype=wp.float32),
-    counts: wp.array(dtype=wp.int32),
-    max_confidences: wp.array(dtype=wp.float32),
+    sum_positions_x: wp.array[wp.float32],
+    sum_positions_y: wp.array[wp.float32],
+    sum_positions_z: wp.array[wp.float32],
+    sum_normals_x: wp.array[wp.float32],
+    sum_normals_y: wp.array[wp.float32],
+    sum_normals_z: wp.array[wp.float32],
+    counts: wp.array[wp.int32],
+    max_confidences: wp.array[wp.float32],
     # Two-pass mode: 0 = confidence pass, 1 = position pass
     pass_mode: wp.int32,
     # Cavity camera candidate buffers (optional - pass empty arrays to disable)
-    cavity_origins: wp.array(dtype=wp.vec3),
-    cavity_directions: wp.array(dtype=wp.vec3),
-    cavity_hit_distances: wp.array(dtype=wp.float32),
-    cavity_count: wp.array(dtype=wp.int32),  # Single-element array for atomic counter
+    cavity_origins: wp.array[wp.vec3],
+    cavity_directions: wp.array[wp.vec3],
+    cavity_hit_distances: wp.array[wp.float32],
+    cavity_count: wp.array[wp.int32],  # Single-element array for atomic counter
     max_cavity_candidates: wp.int32,
     camera_offset: wp.float32,
     cavity_prob_scale: wp.float32,  # Scale factor to control acceptance rate
@@ -803,22 +791,22 @@ def raycast_hemisphere_kernel(
     min_ray_dist: wp.float32,
     max_ray_dist: wp.float32,
     # Hemisphere directions (local frame, z > 0)
-    hemisphere_dirs: wp.array(dtype=wp.vec3),
+    hemisphere_dirs: wp.array[wp.vec3],
     num_directions: wp.int32,
     # Voxel hash grid parameters
     inv_voxel_size: wp.float32,
     # Hash table arrays
-    keys: wp.array(dtype=wp.uint64),
-    active_slots: wp.array(dtype=wp.int32),
+    keys: wp.array[wp.uint64],
+    active_slots: wp.array[wp.int32],
     # Accumulator arrays
-    sum_positions_x: wp.array(dtype=wp.float32),
-    sum_positions_y: wp.array(dtype=wp.float32),
-    sum_positions_z: wp.array(dtype=wp.float32),
-    sum_normals_x: wp.array(dtype=wp.float32),
-    sum_normals_y: wp.array(dtype=wp.float32),
-    sum_normals_z: wp.array(dtype=wp.float32),
-    counts: wp.array(dtype=wp.int32),
-    max_confidences: wp.array(dtype=wp.float32),
+    sum_positions_x: wp.array[wp.float32],
+    sum_positions_y: wp.array[wp.float32],
+    sum_positions_z: wp.array[wp.float32],
+    sum_normals_x: wp.array[wp.float32],
+    sum_normals_y: wp.array[wp.float32],
+    sum_normals_z: wp.array[wp.float32],
+    counts: wp.array[wp.int32],
+    max_confidences: wp.array[wp.float32],
     # Two-pass mode: 0 = confidence pass, 1 = position pass
     pass_mode: wp.int32,
 ):
@@ -1390,6 +1378,9 @@ class SurfaceReconstructor:
         fast_simplification: If True (default), use pyfqmr for fast mesh simplification.
             If False, use Open3D's simplify_quadric_decimation which may produce
             slightly higher quality results but is significantly slower.
+        n_threads: Number of threads for Poisson reconstruction. Defaults to ``1``
+            to avoid an `Open3D bug <https://github.com/isl-org/Open3D/issues/7229>`_.
+            Set to ``-1`` for automatic.
 
     Example:
         >>> extractor = PointCloudExtractor(edge_segments=4, resolution=1000)
@@ -1409,6 +1400,7 @@ class SurfaceReconstructor:
         target_triangles: int | None = None,
         simplify_tolerance: float | None = None,
         fast_simplification: bool = True,
+        n_threads: int = 1,
     ):
         # Validate parameters
         if depth < 1:
@@ -1432,6 +1424,7 @@ class SurfaceReconstructor:
         self.target_triangles = target_triangles
         self.simplify_tolerance = simplify_tolerance
         self.fast_simplification = fast_simplification
+        self.n_threads = n_threads
 
     def reconstruct(
         self,
@@ -1449,7 +1442,7 @@ class SurfaceReconstructor:
         Returns:
             Mesh containing vertices and triangle indices.
         """
-        import open3d as o3d  # noqa: PLC0415  # lazy import, open3d is optional
+        import open3d as o3d  # lazy import, open3d is optional
 
         points = np.asarray(points, dtype=np.float32)
         normals = np.asarray(normals, dtype=np.float32)
@@ -1472,6 +1465,7 @@ class SurfaceReconstructor:
             depth=self.depth,
             scale=self.scale,
             linear_fit=self.linear_fit,
+            n_threads=self.n_threads,
         )
 
         # Remove low-density vertices (boundary artifacts)
@@ -1519,7 +1513,7 @@ class SurfaceReconstructor:
 
     def _simplify_pyfqmr(self, mesh, num_triangles_before: int, verbose: bool) -> tuple[np.ndarray, np.ndarray]:
         """Simplify mesh using pyfqmr (fast)."""
-        from pyfqmr import Simplify  # noqa: PLC0415  # lazy import
+        from pyfqmr import Simplify  # lazy import
 
         vertices = np.asarray(mesh.vertices, dtype=np.float64)
         faces = np.asarray(mesh.triangles, dtype=np.int32)
@@ -1607,7 +1601,7 @@ def extract_largest_island(
         Tuple of (new_vertices, new_indices) containing only the largest island.
         Indices are returned as a flattened array (M*3,).
     """
-    from scipy import sparse  # noqa: PLC0415
+    from scipy import sparse
 
     # Ensure indices are flattened
     indices = np.asarray(indices).flatten()
@@ -1718,6 +1712,7 @@ def remesh_poisson(
     simplify_ratio: float | None = None,
     target_triangles: int | None = None,
     fast_simplification: bool = True,
+    n_threads: int = 1,
     # Post-processing parameters
     keep_largest_island: bool = True,
     # Control parameters
@@ -1762,6 +1757,9 @@ def remesh_poisson(
             Only used if simplify_tolerance and simplify_ratio are None.
         fast_simplification: If True (default), use pyfqmr for fast mesh simplification.
             If False, use Open3D (slower but potentially higher quality).
+        n_threads: Number of threads for Poisson reconstruction. Defaults to ``1``
+            to avoid an `Open3D bug <https://github.com/isl-org/Open3D/issues/7229>`_.
+            Set to ``-1`` for automatic.
         keep_largest_island: If True (default), keep only the largest connected component
             after reconstruction. This removes small floating fragments that can occur
             in areas with sparse point coverage.
@@ -1776,7 +1774,7 @@ def remesh_poisson(
 
     Example:
         >>> import numpy as np
-        >>> from newton._src.geometry.remesh import remesh_poisson
+        >>> from ..geometry.remesh import remesh_poisson
         >>> # Remesh with default settings
         >>> new_verts, new_faces = remesh_poisson(vertices, faces)
         >>> # Remesh with higher quality (more views, finer resolution)
@@ -1804,6 +1802,7 @@ def remesh_poisson(
         simplify_ratio=simplify_ratio,
         target_triangles=target_triangles,
         fast_simplification=fast_simplification,
+        n_threads=n_threads,
     )
     mesh = reconstructor.reconstruct(points, normals, verbose=verbose)
 

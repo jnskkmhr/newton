@@ -1,32 +1,22 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """Implicit MPM model."""
 
 import math
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 import warp as wp
 
 import newton
-import newton.utils
 
 from .rasterized_collisions import Collider
 
-__all__ = ["ImplicitMPMModel", "ImplicitMPMOptions"]
+__all__ = ["ImplicitMPMModel"]
+
+if TYPE_CHECKING:
+    from .solver_implicit_mpm import SolverImplicitMPM
 
 _INFINITY = wp.constant(1.0e12)
 """Value above which quantities are considered infinite"""
@@ -45,47 +35,11 @@ _DEFAULT_ADHESION = 0.0
 """Default adhesion coefficient for colliders (Pa)"""
 
 
-@dataclass
-class ImplicitMPMOptions:
-    """Implicit MPM solver options."""
-
-    # numerics
-    max_iterations: int = 250
-    """Maximum number of iterations for the rheology solver."""
-    tolerance: float = 1.0e-5
-    """Tolerance for the rheology solver."""
-    strain_basis: str = "P0"
-    """Strain basis functions. May be one of P0, Q1"""
-    solver: str = "gauss-seidel"
-    """Solver to use for the rheology solver. May be one of gauss-seidel, jacobi."""
-    warmstart_mode: str = "auto"
-    """Warmstart mode to use for the rheology solver. May be one of none, auto, particles, grid."""
-    collider_velocity_mode: str = "instantaneous"
-    """Collider velocity computation mode. May be one of instantaneous, finite_difference."""
-
-    # grid
-    voxel_size: float = 0.1
-    """Size of the grid voxels."""
-    grid_type: str = "sparse"
-    """Type of grid to use. May be one of sparse, dense, fixed."""
-    grid_padding: int = 0
-    """Number of empty cells to add around particles when allocating the grid."""
-    max_active_cell_count: int = -1
-    """Maximum number of active cells to use for active subsets of dense grids. -1 means unlimited."""
-    transfer_scheme: str = "apic"
-    """Transfer scheme to use for particle-grid transfers. May be one of apic, pic."""
-
-    # material / background
-    critical_fraction: float = 0.0
-    """Fraction for particles under which the yield surface collapses."""
-    air_drag: float = 1.0
-    """Numerical drag for the background air."""
-
-    # experimental
-    collider_normal_from_sdf_gradient: bool = False
-    """Compute collider normals from sdf gradient rather than closest point"""
-    collider_basis: str = "Q1"
-    """Collider basis function string. Examples: P0 (piecewise constant), Q1 (trilinear), S2 (quadratic serendipity), pic8 (particle-based with max 8 points per cell)"""
+def _reuse_or_allocate(arr: wp.array | None, num_particles: int, dtype=float) -> wp.array:
+    """Return ``arr`` if it is already sized for ``num_particles``, else allocate a fresh buffer."""
+    if arr is not None and arr.shape == (num_particles,):
+        return arr
+    return wp.empty(num_particles, dtype=dtype)
 
 
 def _particle_parameter(
@@ -130,48 +84,94 @@ def _merge_meshes(
     )
 
 
-def _get_shape_mesh(model: newton.Model, shape_id: int, geo_type: newton.GeoType, geo_scale: wp.vec3):
+def _get_shape_mesh(model: newton.Model, shape_id: int, geo_type: newton.GeoType, geo_scale: wp.vec3) -> newton.Mesh:
     """Get a shape mesh from a model."""
 
     if geo_type == newton.GeoType.MESH:
         src_mesh = model.shape_source[shape_id]
         vertices = src_mesh.vertices * np.array(geo_scale)
         indices = src_mesh.indices
-        return vertices, indices
+        return newton.Mesh(vertices, indices, compute_inertia=False)
     if geo_type == newton.GeoType.PLANE:
         # Handle "infinite" planes encoded with non-positive scales
         width = geo_scale[0] if len(geo_scale) > 0 and geo_scale[0] > 0.0 else 1000.0
         length = geo_scale[1] if len(geo_scale) > 1 and geo_scale[1] > 0.0 else 1000.0
-        return newton.utils.create_plane_mesh(width, length)
+        mesh = newton.Mesh.create_plane(
+            width,
+            length,
+            compute_normals=False,
+            compute_uvs=False,
+            compute_inertia=False,
+        )
+        return mesh
     elif geo_type == newton.GeoType.SPHERE:
         radius = geo_scale[0]
-        return newton.utils.create_sphere_mesh(radius)
+        mesh = newton.Mesh.create_sphere(
+            radius,
+            compute_normals=False,
+            compute_uvs=False,
+            compute_inertia=False,
+        )
+        return mesh
 
     elif geo_type == newton.GeoType.CAPSULE:
         radius, half_height = geo_scale[:2]
-        return newton.utils.create_capsule_mesh(radius, half_height, up_axis=2)
+        mesh = newton.Mesh.create_capsule(
+            radius,
+            half_height,
+            up_axis=newton.Axis.Z,
+            compute_normals=False,
+            compute_uvs=False,
+            compute_inertia=False,
+        )
+        return mesh
 
     elif geo_type == newton.GeoType.CYLINDER:
         radius, half_height = geo_scale[:2]
-        return newton.utils.create_cylinder_mesh(radius, half_height, up_axis=2)
+        mesh = newton.Mesh.create_cylinder(
+            radius,
+            half_height,
+            up_axis=newton.Axis.Z,
+            compute_normals=False,
+            compute_uvs=False,
+            compute_inertia=False,
+        )
+        return mesh
 
     elif geo_type == newton.GeoType.CONE:
         radius, half_height = geo_scale[:2]
-        return newton.utils.create_cone_mesh(radius, half_height, up_axis=2)
+        mesh = newton.Mesh.create_cone(
+            radius,
+            half_height,
+            up_axis=newton.Axis.Z,
+            compute_normals=False,
+            compute_uvs=False,
+            compute_inertia=False,
+        )
+        return mesh
 
     elif geo_type == newton.GeoType.BOX:
         if len(geo_scale) == 1:
             ext = (geo_scale[0],) * 3
         else:
             ext = tuple(geo_scale[:3])
-        return newton.utils.create_box_mesh(ext)
+        mesh = newton.Mesh.create_box(
+            ext[0],
+            ext[1],
+            ext[2],
+            duplicate_vertices=False,
+            compute_normals=False,
+            compute_uvs=False,
+            compute_inertia=False,
+        )
+        return mesh
 
     raise NotImplementedError(f"Shape type {geo_type} not supported")
 
 
 @wp.kernel
 def _apply_shape_transforms(
-    points: wp.array(dtype=wp.vec3), shape_ids: wp.array(dtype=int), shape_transforms: wp.array(dtype=wp.transform)
+    points: wp.array[wp.vec3], shape_ids: wp.array[int], shape_transforms: wp.array[wp.transform]
 ):
     v = wp.tid()
     p = points[v]
@@ -179,6 +179,20 @@ def _apply_shape_transforms(
     shape_transform = shape_transforms[shape_id]
     p = wp.transform_point(shape_transform, p)
     points[v] = p
+
+
+@wp.kernel
+def _compute_particle_volume_density(
+    particle_radius: wp.array[float],
+    particle_mass: wp.array[float],
+    particle_volume: wp.array[float],
+    particle_density: wp.array[float],
+):
+    i = wp.tid()
+    r = particle_radius[i]
+    v = 8.0 * r * r * r
+    particle_volume[i] = v
+    particle_density[i] = particle_mass[i] / v
 
 
 def _get_body_collision_shapes(model: newton.Model, body_index: int):
@@ -192,7 +206,7 @@ def _get_body_collision_shapes(model: newton.Model, body_index: int):
 
 def _get_shape_collision_materials(model: newton.Model, shape_ids: list[int]):
     """Returns the collision materials from the model for a list of shapes"""
-    thicknesses = model.shape_thickness.numpy()[shape_ids]
+    thicknesses = model.shape_margin.numpy()[shape_ids]
     friction = model.shape_material_mu.numpy()[shape_ids]
 
     return thicknesses, friction
@@ -211,7 +225,8 @@ def _create_body_collider_mesh(
     shape_meshes = [_get_shape_mesh(model, sid, newton.GeoType(shape_type[sid]), shape_scale[sid]) for sid in shape_ids]
 
     collider_points, collider_indices, vertex_shape_ids, face_material_ids = _merge_meshes(
-        *zip(*shape_meshes, strict=True),
+        points=[mesh.vertices for mesh in shape_meshes],
+        indices=[mesh.indices for mesh in shape_meshes],
         shape_ids=shape_ids,
         material_ids=material_ids,
     )
@@ -229,23 +244,55 @@ def _create_body_collider_mesh(
     return wp.Mesh(collider_points, collider_indices, wp.zeros_like(collider_points)), face_material_ids
 
 
+@wp.struct
+class MaterialParameters:
+    """Convenience struct for passing material parameters to kernels."""
+
+    young_modulus: wp.array[float]
+    """Young's modulus for the material."""
+    poisson_ratio: wp.array[float]
+    """Poisson's ratio for the material."""
+    damping: wp.array[float]
+    """Damping for the material."""
+
+    friction: wp.array[float]
+    """Friction for the material."""
+    yield_pressure: wp.array[float]
+    """Yield pressure for the material."""
+    tensile_yield_ratio: wp.array[float]
+    """Tensile yield ratio for the material."""
+    yield_stress: wp.array[float]
+    """Yield stress for the material."""
+    viscosity: wp.array[float]
+    """Viscosity for the material."""
+
+    hardening: wp.array[float]
+    """Hardening for the material."""
+    hardening_rate: wp.array[float]
+    """Hardening rate for the material."""
+    softening_rate: wp.array[float]
+    """Softening rate for the material."""
+    dilatancy: wp.array[float]
+    """Dilatancy for the material."""
+
+
 class ImplicitMPMModel:
     """Wrapper augmenting a ``newton.Model`` with implicit MPM data and setup.
 
     Holds particle material parameters, collider parameters, and convenience
-    arrays derived from the wrapped ``model`` and ``ImplicitMPMOptions``. The
-    instance is consumed by ``SolverImplicitMPM`` during time stepping.
+    arrays derived from the wrapped ``model`` and ``SolverImplicitMPM.Config``.
+    Consumed by ``SolverImplicitMPM`` during time stepping.
 
     Args:
         model: The base Newton model to augment.
         options: Options controlling particle and collider defaults.
     """
 
-    def __init__(self, model: newton.Model, options: ImplicitMPMOptions):
+    def __init__(self, model: newton.Model, options: "SolverImplicitMPM.Config"):
         self.model = model
         self._options = options
 
-        # Global options from ImplicitMPMOptions
+        # Global options from SolverImplicitMPM.Config
         self.voxel_size = float(options.voxel_size)
         """Size of the grid voxels"""
 
@@ -258,34 +305,65 @@ class ImplicitMPMModel:
         self.collider = Collider()
         """Collider struct"""
 
-        self.collider_velocity_mode = options.collider_velocity_mode
-        """Collider velocity computation mode (instantaneous or finite_difference)"""
+        self.material_parameters = MaterialParameters()
+        """Material parameters struct"""
 
         self.collider_body_mass = None
         self.collider_body_inv_inertia = None
+        self.collider_body_q = None
 
-        self.setup_particle_material()
+        self.notify_particle_material_changed()
         self.setup_collider()
 
     def notify_particle_material_changed(self):
-        """Refresh cached extrema for material parameters.
+        """Rebind per-particle material arrays and refresh derived state.
 
-        Tracks the minimum Young's modulus and maximum hardening across
-        particles to quickly toggle code paths (e.g., compliant particles or
-        hardening enabled) without recomputing per step.
+        Called once during ``__init__`` and whenever particle counts, masses,
+        radii, or any ``model.mpm.*`` material array are reassigned. Binds
+        references from the ``model.mpm.*`` namespace (registered via
+        :meth:`SolverImplicitMPM.register_custom_attributes`) into
+        ``self.material_parameters``, then recomputes:
+
+        - ``particle_radius``, ``particle_volume``, and ``particle_density``,
+          from ``model.particle_radius`` and ``model.particle_mass``.
+        - Cached extrema (``min_young_modulus``, ``max_hardening``) and feature
+          flags (``has_viscosity``, ``has_dilatancy``) used to toggle code
+          paths without rescanning every step.
         """
         model = self.model
-        mpm_ns = getattr(model, "mpm", None)
 
-        if mpm_ns is not None and hasattr(mpm_ns, "young_modulus"):
-            self.min_young_modulus = float(np.min(mpm_ns.young_modulus.numpy()))
-        else:
-            self.min_young_modulus = _INFINITY
+        self.material_parameters.young_modulus = model.mpm.young_modulus
+        self.material_parameters.poisson_ratio = model.mpm.poisson_ratio
+        self.material_parameters.damping = model.mpm.damping
+        self.material_parameters.friction = model.mpm.friction
+        self.material_parameters.yield_pressure = model.mpm.yield_pressure
+        self.material_parameters.tensile_yield_ratio = model.mpm.tensile_yield_ratio
+        self.material_parameters.yield_stress = model.mpm.yield_stress
+        self.material_parameters.hardening = model.mpm.hardening
+        self.material_parameters.hardening_rate = model.mpm.hardening_rate
+        self.material_parameters.softening_rate = model.mpm.softening_rate
+        self.material_parameters.dilatancy = model.mpm.dilatancy
+        self.material_parameters.viscosity = model.mpm.viscosity
 
-        if mpm_ns is not None and hasattr(mpm_ns, "hardening"):
-            self.max_hardening = float(np.max(mpm_ns.hardening.numpy()))
-        else:
-            self.max_hardening = 0.0
+        self.min_young_modulus = float(np.min(self.material_parameters.young_modulus.numpy()))
+        self.max_hardening = float(np.max(self.material_parameters.hardening.numpy()))
+        self.has_viscosity = bool(np.any(self.material_parameters.viscosity.numpy() > 0))
+        self.has_dilatancy = bool(np.any(self.material_parameters.dilatancy.numpy() > 0))
+
+        # Recompute particle volume and density from available particle data.
+        # Assume that particles represent a cuboid volume of space, i.e., V = 8 r**3
+        # (particles are typically laid out in a grid, and represent a uniform material).
+        with wp.ScopedDevice(model.device):
+            num_particles = model.particle_q.shape[0]
+            self.particle_radius = _particle_parameter(num_particles, model.particle_radius)
+            self.particle_volume = _reuse_or_allocate(getattr(self, "particle_volume", None), num_particles)
+            self.particle_density = _reuse_or_allocate(getattr(self, "particle_density", None), num_particles)
+            wp.launch(
+                _compute_particle_volume_density,
+                dim=num_particles,
+                inputs=[self.particle_radius, model.particle_mass],
+                outputs=[self.particle_volume, self.particle_density],
+            )
 
     def notify_collider_changed(self):
         """Refresh cached extrema for collider parameters.
@@ -302,28 +380,6 @@ class ImplicitMPMModel:
         self.min_collider_mass = np.min(dynamic_body_masses, initial=np.inf)
         self.collider.query_max_dist = self.voxel_size * math.sqrt(3.0)
         self.collider_body_count = int(np.max(body_ids + 1, initial=0))
-
-    def setup_particle_material(self):
-        """Initialize derived per-particle fields from the model.
-
-        Computes particle volumes and densities from the model's particle mass and radius.
-        Also caches extrema used by the solver for fast feature toggles.
-
-        Per-particle material parameters are read directly from the ``model.mpm.*`` namespace
-        (registered via :meth:`SolverImplicitMPM.register_custom_attributes`).
-        """
-        model = self.model
-
-        num_particles = model.particle_q.shape[0]
-
-        with wp.ScopedDevice(model.device):
-            # Assume that particles represent a cuboid volume of space
-            # (they are typically laid out on a grid)
-            self.particle_radius = _particle_parameter(num_particles, model.particle_radius)
-            self.particle_volume = wp.array(8.0 * self.particle_radius.numpy() ** 3)
-            self.particle_density = model.particle_mass / self.particle_volume
-
-        self.notify_particle_material_changed()
 
     def setup_collider(
         self,
@@ -468,13 +524,13 @@ class ImplicitMPMModel:
 
         for collider_id, body_id in enumerate(collider_body_ids):
             if body_id is not None:
-                for material_id, shape_thickness, shape_friction in zip(
+                for material_id, shape_margin, shape_friction in zip(
                     collider_material_ids[collider_id],
                     *_get_shape_collision_materials(model, body_shapes[body_id]),
                     strict=True,
                 ):
                     # use material from shapes as default
-                    assign_material(material_id, thickness=shape_thickness, friction=shape_friction)
+                    assign_material(material_id, thickness=shape_margin, friction=shape_friction)
                     # override with user-provided material
                     assign_collider_material(material_id, collider_id)
             else:
@@ -525,9 +581,6 @@ class ImplicitMPMModel:
         self.collider_body_inv_inertia = body_inv_inertia
         self.collider_body_q = body_q
         self._collider_meshes = collider_meshes  # Keep a ref so that meshes are not garbage collected
-
-        # Toggle finite-difference collider velocities based on model setting
-        self.collider.use_finite_difference_velocity = self.collider_velocity_mode == "finite_difference"
 
         self.notify_collider_changed()
 

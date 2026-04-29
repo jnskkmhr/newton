@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """
 Schema resolver tests for USD imports using ant.usda.
@@ -44,6 +32,7 @@ and MuJoCo physics solvers when importing USD files. Tests cover:
 - `humanoid.usda`: mujoco humanoid with D6 joints and Newton state attributes
 """
 
+import math
 import unittest
 from pathlib import Path
 from typing import Any
@@ -51,16 +40,15 @@ from typing import Any
 import warp as wp
 
 from newton import Model, ModelBuilder
-from newton._src.usd.schema_resolver import (
+from newton._src.usd.schema_resolver import SchemaResolverManager
+from newton.solvers import SolverMuJoCo
+from newton.tests.unittest_utils import USD_AVAILABLE
+from newton.usd import (
     PrimType,
-    SchemaResolverManager,
-)
-from newton._src.usd.schemas import (
     SchemaResolverMjc,
     SchemaResolverNewton,
     SchemaResolverPhysx,
 )
-from newton.tests.unittest_utils import USD_AVAILABLE
 
 AttributeFrequency = Model.AttributeFrequency
 
@@ -147,7 +135,7 @@ class TestSchemaResolver(unittest.TestCase):
         builder = ModelBuilder()
         builder.add_usd(
             source=str(ant_mixed_path),
-            schema_resolvers=[SchemaResolverNewton(), SchemaResolverMjc()],  # nothing should be found
+            schema_resolvers=[SchemaResolverNewton()],  # nothing should be found
             verbose=False,
         )
         armature_values_found = []
@@ -157,6 +145,34 @@ class TestSchemaResolver(unittest.TestCase):
                 armature_values_found.append(armature)
         for _i, armature in enumerate(armature_values_found):
             self.assertAlmostEqual(armature, 0.01, places=3)
+
+    def test_physx_joint_velocity_limit(self):
+        """
+        Test PhysX joint velocity limit (maxJointVelocity) resolution.
+
+        Verifies that physxJoint:maxJointVelocity values (100.0 deg/s) are correctly
+        resolved from ant_mixed.usda and converted to rad/s for revolute joints.
+        """
+        test_dir = Path(__file__).parent
+        assets_dir = test_dir / "assets"
+        ant_mixed_path = assets_dir / "ant_mixed.usda"
+        self.assertTrue(ant_mixed_path.exists(), f"Missing mixed USD: {ant_mixed_path}")
+
+        builder = ModelBuilder()
+        builder.add_usd(
+            source=str(ant_mixed_path),
+            schema_resolvers=[SchemaResolverPhysx()],
+            verbose=False,
+        )
+        expected_velocity_limit = 100.0 * math.pi / 180.0  # 100 deg/s -> rad/s
+        velocity_limits_found = []
+        for i in range(6, builder.joint_dof_count):
+            vel_limit = builder.joint_velocity_limit[i]
+            if vel_limit < 1e5:  # filter out default 1e6 values
+                velocity_limits_found.append(vel_limit)
+        self.assertGreater(len(velocity_limits_found), 0, "No velocity limits found from USD")
+        for vel_limit in velocity_limits_found:
+            self.assertAlmostEqual(vel_limit, expected_velocity_limit, places=3)
 
     def test_schema_attrs_collection(self):
         """
@@ -412,6 +428,7 @@ class TestSchemaResolver(unittest.TestCase):
 
         # Import with two different schema priorities
         builder_newton = ModelBuilder()
+        SolverMuJoCo.register_custom_attributes(builder_newton)
         builder_newton.add_usd(
             source=str(dst),
             schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
@@ -419,6 +436,7 @@ class TestSchemaResolver(unittest.TestCase):
         )
 
         builder_mjc = ModelBuilder()
+        SolverMuJoCo.register_custom_attributes(builder_mjc)
         builder_mjc.add_usd(
             source=str(dst),
             schema_resolvers=[SchemaResolverMjc(), SchemaResolverNewton(), SchemaResolverPhysx()],
@@ -451,7 +469,7 @@ class TestSchemaResolver(unittest.TestCase):
         builder = ModelBuilder()
         result = builder.add_usd(
             source=str(dst),
-            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
+            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx()],
             verbose=False,
         )
 
@@ -537,14 +555,14 @@ class TestSchemaResolver(unittest.TestCase):
         # Joint custom property materialization and defaults
         self.assertEqual(model.get_attribute_frequency("testJointScalar"), AttributeFrequency.JOINT)
         # Authored joint value
-        self.assertIn(joint_name, builder.joint_key)
-        joint_idx = builder.joint_key.index(joint_name)
+        self.assertIn(joint_name, builder.joint_label)
+        joint_idx = builder.joint_label.index(joint_name)
         joint_arr = model.testJointScalar.numpy()
         self.assertAlmostEqual(float(joint_arr[joint_idx]), 2.25, places=6)
         # Non-authored joint should be default 0.0
         other_joint = "/ant/joints/front_right_leg"
-        self.assertIn(other_joint, builder.joint_key)
-        other_joint_idx = builder.joint_key.index(other_joint)
+        self.assertIn(other_joint, builder.joint_label)
+        other_joint_idx = builder.joint_label.index(other_joint)
         self.assertAlmostEqual(float(joint_arr[other_joint_idx]), 0.0, places=6)
 
         # Validate vec2 and quat custom properties are materialized with expected shapes
@@ -615,7 +633,7 @@ class TestSchemaResolver(unittest.TestCase):
         builder = ModelBuilder()
         result = builder.add_usd(
             source=str(usd_path),
-            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
+            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx()],
             verbose=False,
         )
 
@@ -699,7 +717,7 @@ class TestSchemaResolver(unittest.TestCase):
 
         # Test 3: No authored value, no explicit default, use Newton mapping default
         val3 = resolver_newton_only.get_value(joint_with_physx_armature, PrimType.JOINT, "armature", default=None)
-        self.assertAlmostEqual(val3, 1.0e-2, places=6)
+        self.assertAlmostEqual(val3, 0.0, places=6)
 
         # Test 3b: Use SchemaResolverMjc only - should return SchemaResolverMjc armature default (0.0)
         resolver_mjc_only = SchemaResolverManager([SchemaResolverMjc()])
@@ -737,7 +755,7 @@ class TestSchemaResolver(unittest.TestCase):
         builder = ModelBuilder()
         builder.add_usd(
             source=str(usd_path),
-            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
+            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx()],
             verbose=False,
         )
 
@@ -771,8 +789,8 @@ class TestSchemaResolver(unittest.TestCase):
         for i in range(model.joint_count):
             joint_type = joint_types[i]
             if joint_type == 1:  # JointType.REVOLUTE
-                joint_key = builder.joint_key[i] if i < len(builder.joint_key) else None
-                if joint_key not in expected_joint_values:
+                joint_label = builder.joint_label[i] if i < len(builder.joint_label) else None
+                if joint_label not in expected_joint_values:
                     continue
 
                 q_start = int(joint_q_start[i])
@@ -781,20 +799,20 @@ class TestSchemaResolver(unittest.TestCase):
                 actual_pos = joint_q[q_start]
                 actual_vel = joint_qd[qd_start]
 
-                expected_pos_deg, expected_vel = expected_joint_values[joint_key]
+                expected_pos_deg, expected_vel = expected_joint_values[joint_label]
                 expected_pos_rad = expected_pos_deg * (3.14159 / 180.0)
 
                 self.assertAlmostEqual(
                     actual_pos,
                     expected_pos_rad,
                     places=4,
-                    msg=f"Joint {joint_key} position mismatch: expected {expected_pos_deg}°, got {actual_pos * 180 / 3.14159:.1f}°",
+                    msg=f"Joint {joint_label} position mismatch: expected {expected_pos_deg}°, got {actual_pos * 180 / 3.14159:.1f}°",
                 )
                 self.assertAlmostEqual(
                     actual_vel,
                     expected_vel,
                     places=4,
-                    msg=f"Joint {joint_key} velocity mismatch: expected {expected_vel}, got {actual_vel}",
+                    msg=f"Joint {joint_label} velocity mismatch: expected {expected_vel}, got {actual_vel}",
                 )
                 revolute_joints_found += 1
 
@@ -820,7 +838,7 @@ class TestSchemaResolver(unittest.TestCase):
         builder = ModelBuilder()
         builder.add_usd(
             source=str(humanoid_path),
-            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
+            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx()],
             verbose=False,
         )
 
@@ -948,7 +966,7 @@ class TestSchemaResolver(unittest.TestCase):
         builder = ModelBuilder()
         builder.add_usd(
             source=str(humanoid_path),
-            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
+            schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx()],
             verbose=False,
         )
 
@@ -1072,6 +1090,7 @@ class TestSchemaResolver(unittest.TestCase):
 
         # Test with all three plugins to ensure attribute collection works
         builder = ModelBuilder()
+        SolverMuJoCo.register_custom_attributes(builder)
         result = builder.add_usd(
             source=str(ant_mixed_path),
             schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
@@ -1123,6 +1142,7 @@ class TestSchemaResolver(unittest.TestCase):
         self.assertTrue(ant_mixed_path.exists(), f"Missing mixed USD: {ant_mixed_path}")
 
         builder = ModelBuilder()
+        SolverMuJoCo.register_custom_attributes(builder)
         result = builder.add_usd(
             source=str(ant_mixed_path),
             schema_resolvers=[SchemaResolverNewton(), SchemaResolverPhysx(), SchemaResolverMjc()],
@@ -1139,8 +1159,8 @@ class TestSchemaResolver(unittest.TestCase):
         body_idx = body_map[body_path]
 
         joint_name = "/ant/joints/front_left_leg"
-        self.assertIn(joint_name, builder.joint_key)
-        joint_idx = builder.joint_key.index(joint_name)
+        self.assertIn(joint_name, builder.joint_label)
+        joint_idx = builder.joint_label.index(joint_name)
 
         # Test 1: Verify that testBodyScalar exists in both default and namespace_a
         # Default namespace: newton:testBodyScalar = 1.5 (model assignment)
@@ -1283,10 +1303,8 @@ class TestSchemaResolver(unittest.TestCase):
         self.assertAlmostEqual(pd_gains[0][0], 2.0, places=5)
         self.assertAlmostEqual(pd_gains[0][1], 0.2, places=5)
 
-    def test_contact_margin(self):
-        """
-        Test contact_margin priority.
-        """
+    def test_margin(self):
+        """Test margin resolution: newton:contactMargin, physx restOffset, mjc:margin priority."""
         stage = Usd.Stage.CreateInMemory()
         xform = UsdGeom.Xform.Define(stage, "/xform").GetPrim()
         UsdPhysics.RigidBodyAPI.Apply(xform)
@@ -1295,39 +1313,36 @@ class TestSchemaResolver(unittest.TestCase):
         self.assertTrue(collider.HasAPI("NewtonCollisionAPI"))
         self.assertTrue(collider.HasAPI("PhysicsCollisionAPI"))
         self.assertTrue(UsdPhysics.CollisionAPI(collider).GetCollisionEnabledAttr().Get())
-        # redundant, but required to make UsdPhysics.LoadUsdPhysicsFromRange() work correctly
         UsdPhysics.CollisionAPI.Apply(collider)
 
-        # Create resolver
         resolver = SchemaResolverManager([SchemaResolverPhysx(), SchemaResolverNewton()])
-
-        # there is no authored contact_margin in the asset, so it should be the physx default (-inf)
-        contact_margin = resolver.get_value(collider, PrimType.SHAPE, "contact_margin")
-        self.assertEqual(contact_margin, float("-inf"))
-
-        # an explicit newton value should be used
         collider.GetAttribute("newton:contactMargin").Set(0.2)
-        contact_margin = resolver.get_value(collider, PrimType.SHAPE, "contact_margin")
-        self.assertAlmostEqual(contact_margin, 0.2)
+        margin = resolver.get_value(collider, PrimType.SHAPE, "margin")
+        self.assertAlmostEqual(margin, 0.2)
 
-        # an explicit physx value should override the newton value
-        collider.CreateAttribute("physxCollision:contactOffset", Sdf.ValueTypeNames.Float).Set(0.3)
-        contact_margin = resolver.get_value(collider, PrimType.SHAPE, "contact_margin")
-        self.assertAlmostEqual(contact_margin, 0.3)
+        collider.CreateAttribute("physxCollision:restOffset", Sdf.ValueTypeNames.Float).Set(0.15)
+        margin = resolver.get_value(collider, PrimType.SHAPE, "margin")
+        self.assertAlmostEqual(margin, 0.15)
 
-        # reversed resolver priority should use the newton value
+        # PhysX restOffset authored as -inf -> treated as unset, falls through to Newton
+        collider.GetAttribute("physxCollision:restOffset").Set(float("-inf"))
+        margin = resolver.get_value(collider, PrimType.SHAPE, "margin")
+        self.assertAlmostEqual(margin, 0.2)
+
+        # Restore finite value for subsequent tests
+        collider.GetAttribute("physxCollision:restOffset").Set(0.15)
+
         resolver = SchemaResolverManager([SchemaResolverNewton(), SchemaResolverPhysx()])
-        contact_margin = resolver.get_value(collider, PrimType.SHAPE, "contact_margin")
-        self.assertAlmostEqual(contact_margin, 0.2)
+        margin = resolver.get_value(collider, PrimType.SHAPE, "margin")
+        self.assertAlmostEqual(margin, 0.2)
 
-        # mujoco mjc:margin is not equivalent to newton:contactMargin, so it is ignored
         resolver = SchemaResolverManager([SchemaResolverMjc(), SchemaResolverNewton()])
         collider.CreateAttribute("mjc:margin", Sdf.ValueTypeNames.Float).Set(0.4)
-        contact_margin = resolver.get_value(collider, PrimType.SHAPE, "contact_margin")
-        self.assertAlmostEqual(contact_margin, 0.2)
+        margin = resolver.get_value(collider, PrimType.SHAPE, "margin")
+        self.assertAlmostEqual(margin, 0.4)
 
-        # mjc:margin is available instead via custom solver attributes
         builder = ModelBuilder()
+        SolverMuJoCo.register_custom_attributes(builder)
         result = builder.add_usd(
             source=stage,
             schema_resolvers=[SchemaResolverMjc(), SchemaResolverNewton()],
@@ -1335,6 +1350,165 @@ class TestSchemaResolver(unittest.TestCase):
         )
         schema_attrs = result.get("schema_attrs", {})
         self.assertAlmostEqual(schema_attrs["mjc"]["/xform/collider"]["mjc:margin"], 0.4)
+
+    def test_gap(self):
+        """Test gap resolution: newton:contactGap, physx contactOffset-restOffset, mjc:gap priority."""
+        stage = Usd.Stage.CreateInMemory()
+        xform = UsdGeom.Xform.Define(stage, "/xform").GetPrim()
+        UsdPhysics.RigidBodyAPI.Apply(xform)
+
+        # --- Collider A: test newton:contactGap + PhysX partial/full authoring ---
+        collider_a = UsdGeom.Cube.Define(stage, "/xform/collider_a").GetPrim()
+        collider_a.ApplyAPI("NewtonCollisionAPI")
+        UsdPhysics.CollisionAPI.Apply(collider_a)
+
+        resolver = SchemaResolverManager([SchemaResolverPhysx(), SchemaResolverNewton()])
+
+        # No gap authored anywhere -> schema default -inf
+        gap = resolver.get_value(collider_a, PrimType.SHAPE, "gap")
+        self.assertEqual(gap, float("-inf"))
+
+        # Newton contactGap only -> PhysX getter returns None, falls through to Newton
+        collider_a.GetAttribute("newton:contactGap").Set(0.07)
+        gap = resolver.get_value(collider_a, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.07)
+
+        # PhysX only contactOffset (no restOffset) -> getter returns None, still Newton
+        collider_a.CreateAttribute("physxCollision:contactOffset", Sdf.ValueTypeNames.Float).Set(0.25)
+        gap = resolver.get_value(collider_a, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.07)
+
+        # PhysX both set -> getter returns 0.25 - 0.15 = 0.10; PhysX is first, so PhysX wins
+        collider_a.CreateAttribute("physxCollision:restOffset", Sdf.ValueTypeNames.Float).Set(0.15)
+        gap = resolver.get_value(collider_a, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.10)
+
+        # Newton first -> Newton wins: 0.07
+        resolver = SchemaResolverManager([SchemaResolverNewton(), SchemaResolverPhysx()])
+        gap = resolver.get_value(collider_a, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.07)
+
+        # --- Collider B: PhysX-only (no Newton contactGap) ---
+        collider_b = UsdGeom.Cube.Define(stage, "/xform/collider_b").GetPrim()
+        UsdPhysics.CollisionAPI.Apply(collider_b)
+
+        resolver = SchemaResolverManager([SchemaResolverPhysx(), SchemaResolverNewton()])
+
+        # PhysX only restOffset (no contactOffset) -> getter returns None -> default -inf
+        collider_b.CreateAttribute("physxCollision:restOffset", Sdf.ValueTypeNames.Float).Set(0.01)
+        gap = resolver.get_value(collider_b, PrimType.SHAPE, "gap")
+        self.assertEqual(gap, float("-inf"))
+
+        # PhysX both -> 0.04 - 0.01 = 0.03
+        collider_b.CreateAttribute("physxCollision:contactOffset", Sdf.ValueTypeNames.Float).Set(0.04)
+        gap = resolver.get_value(collider_b, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.03)
+
+        # --- Collider C: PhysX -inf values ---
+        collider_c = UsdGeom.Cube.Define(stage, "/xform/collider_c").GetPrim()
+        UsdPhysics.CollisionAPI.Apply(collider_c)
+        collider_c.CreateAttribute("physxCollision:restOffset", Sdf.ValueTypeNames.Float).Set(float("-inf"))
+        collider_c.CreateAttribute("physxCollision:contactOffset", Sdf.ValueTypeNames.Float).Set(0.05)
+        gap = resolver.get_value(collider_c, PrimType.SHAPE, "gap")
+        self.assertEqual(gap, float("-inf"))
+
+        # --- Mjc ---
+        resolver = SchemaResolverManager([SchemaResolverMjc(), SchemaResolverNewton()])
+        collider_a.CreateAttribute("mjc:gap", Sdf.ValueTypeNames.Float).Set(0.05)
+        gap = resolver.get_value(collider_a, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.05)
+
+    def test_contact_gap(self):
+        """
+        Test gap (contact processing distance) priority: Newton, PhysX contactOffset, Mjc.
+        """
+        stage = Usd.Stage.CreateInMemory()
+        xform = UsdGeom.Xform.Define(stage, "/xform").GetPrim()
+        UsdPhysics.RigidBodyAPI.Apply(xform)
+        collider = UsdGeom.Cube.Define(stage, "/xform/collider").GetPrim()
+        collider.ApplyAPI("NewtonCollisionAPI")
+        UsdPhysics.CollisionAPI.Apply(collider)
+
+        resolver = SchemaResolverManager([SchemaResolverPhysx(), SchemaResolverNewton()])
+
+        collider.CreateAttribute("newton:contactGap", Sdf.ValueTypeNames.Float).Set(0.02)
+        gap = resolver.get_value(collider, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.02)
+
+        # PhysX gap = contactOffset - restOffset; both must be set
+        collider.CreateAttribute("physxCollision:restOffset", Sdf.ValueTypeNames.Float).Set(0.01)
+        collider.CreateAttribute("physxCollision:contactOffset", Sdf.ValueTypeNames.Float).Set(0.03)
+        gap = resolver.get_value(collider, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.02)
+
+        resolver = SchemaResolverManager([SchemaResolverNewton(), SchemaResolverPhysx()])
+        gap = resolver.get_value(collider, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.02)
+
+        resolver = SchemaResolverManager([SchemaResolverMjc(), SchemaResolverNewton()])
+        collider.CreateAttribute("mjc:gap", Sdf.ValueTypeNames.Float).Set(0.01)
+        gap = resolver.get_value(collider, PrimType.SHAPE, "gap")
+        self.assertAlmostEqual(gap, 0.01)
+
+    def test_self_collision_enabled(self):
+        """
+        Test self_collision_enabled on articulation root: Newton vs PhysX priority.
+        """
+        stage = Usd.Stage.CreateInMemory()
+        articulation_prim = UsdGeom.Xform.Define(stage, "/articulation").GetPrim()
+        UsdPhysics.ArticulationRootAPI.Apply(articulation_prim)
+
+        resolver = SchemaResolverManager([SchemaResolverPhysx(), SchemaResolverNewton()])
+
+        # No attributes: schema default True from first resolver (PhysX)
+        val = resolver.get_value(
+            articulation_prim,
+            PrimType.ARTICULATION,
+            "self_collision_enabled",
+            default=True,
+        )
+        self.assertIs(val, True)
+
+        # Newton only (False): PhysX first so PhysX default True is used
+        articulation_prim.CreateAttribute("newton:selfCollisionEnabled", Sdf.ValueTypeNames.Bool).Set(False)
+        val = resolver.get_value(
+            articulation_prim,
+            PrimType.ARTICULATION,
+            "self_collision_enabled",
+            default=True,
+        )
+        self.assertIs(val, False)
+
+        # PhysX only (False): PhysX attribute overrides
+        articulation_prim.RemoveProperty("newton:selfCollisionEnabled")
+        articulation_prim.CreateAttribute("physxArticulation:enabledSelfCollisions", Sdf.ValueTypeNames.Bool).Set(False)
+        val = resolver.get_value(
+            articulation_prim,
+            PrimType.ARTICULATION,
+            "self_collision_enabled",
+            default=True,
+        )
+        self.assertIs(val, False)
+
+        # Both set: Newton True, PhysX False; PhysX first -> False
+        articulation_prim.CreateAttribute("newton:selfCollisionEnabled", Sdf.ValueTypeNames.Bool).Set(True)
+        val = resolver.get_value(
+            articulation_prim,
+            PrimType.ARTICULATION,
+            "self_collision_enabled",
+            default=True,
+        )
+        self.assertIs(val, False)
+
+        # Newton first: same prim, Newton wins -> True
+        resolver = SchemaResolverManager([SchemaResolverNewton(), SchemaResolverPhysx()])
+        val = resolver.get_value(
+            articulation_prim,
+            PrimType.ARTICULATION,
+            "self_collision_enabled",
+            default=True,
+        )
+        self.assertIs(val, True)
 
     def test_max_hull_vertices(self):
         """
@@ -1384,7 +1558,7 @@ class TestSchemaResolver(unittest.TestCase):
 
     def test_material_friction_attributes(self):
         """
-        Test rolling_friction and torsional_friction priority on materials.
+        Test mu_rolling and mu_torsional priority on materials.
         """
 
         stage = Usd.Stage.CreateInMemory()
@@ -1397,16 +1571,16 @@ class TestSchemaResolver(unittest.TestCase):
         resolver = SchemaResolverManager([SchemaResolverNewton()])
 
         # there is no authored value, so it should return the default (0)
-        rolling = resolver.get_value(material, PrimType.MATERIAL, "rolling_friction")
-        torsional = resolver.get_value(material, PrimType.MATERIAL, "torsional_friction")
+        rolling = resolver.get_value(material, PrimType.MATERIAL, "mu_rolling")
+        torsional = resolver.get_value(material, PrimType.MATERIAL, "mu_torsional")
         self.assertEqual(rolling, 0.0005)
         self.assertEqual(torsional, 0.25)
 
         # an explicit newton value should be used
         material.GetAttribute("newton:rollingFriction").Set(0.1)
         material.GetAttribute("newton:torsionalFriction").Set(0.2)
-        rolling = resolver.get_value(material, PrimType.MATERIAL, "rolling_friction")
-        torsional = resolver.get_value(material, PrimType.MATERIAL, "torsional_friction")
+        rolling = resolver.get_value(material, PrimType.MATERIAL, "mu_rolling")
+        torsional = resolver.get_value(material, PrimType.MATERIAL, "mu_torsional")
         self.assertAlmostEqual(rolling, 0.1)
         self.assertAlmostEqual(torsional, 0.2)
 
@@ -1414,22 +1588,22 @@ class TestSchemaResolver(unittest.TestCase):
         resolver = SchemaResolverManager([SchemaResolverMjc(), SchemaResolverNewton()])
         material.CreateAttribute("mjc:rollingfriction", Sdf.ValueTypeNames.Float).Set(0.3)
         material.CreateAttribute("mjc:torsionalfriction", Sdf.ValueTypeNames.Float).Set(0.4)
-        rolling = resolver.get_value(material, PrimType.MATERIAL, "rolling_friction")
-        torsional = resolver.get_value(material, PrimType.MATERIAL, "torsional_friction")
+        rolling = resolver.get_value(material, PrimType.MATERIAL, "mu_rolling")
+        torsional = resolver.get_value(material, PrimType.MATERIAL, "mu_torsional")
         self.assertAlmostEqual(rolling, 0.3)
         self.assertAlmostEqual(torsional, 0.4)
 
         # with mujoco lower priority, newton values should be used
         resolver = SchemaResolverManager([SchemaResolverNewton(), SchemaResolverMjc()])
-        rolling = resolver.get_value(material, PrimType.MATERIAL, "rolling_friction")
-        torsional = resolver.get_value(material, PrimType.MATERIAL, "torsional_friction")
+        rolling = resolver.get_value(material, PrimType.MATERIAL, "mu_rolling")
+        torsional = resolver.get_value(material, PrimType.MATERIAL, "mu_torsional")
         self.assertAlmostEqual(rolling, 0.1)
         self.assertAlmostEqual(torsional, 0.2)
 
         # physx does not have these attributes, so newton values should still be used
         resolver = SchemaResolverManager([SchemaResolverPhysx(), SchemaResolverNewton()])
-        rolling = resolver.get_value(material, PrimType.MATERIAL, "rolling_friction")
-        torsional = resolver.get_value(material, PrimType.MATERIAL, "torsional_friction")
+        rolling = resolver.get_value(material, PrimType.MATERIAL, "mu_rolling")
+        torsional = resolver.get_value(material, PrimType.MATERIAL, "mu_torsional")
         self.assertAlmostEqual(rolling, 0.1)
         self.assertAlmostEqual(torsional, 0.2)
 

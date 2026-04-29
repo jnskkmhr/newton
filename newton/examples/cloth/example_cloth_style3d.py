@@ -1,21 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
-import numpy as np
 import warp as wp
-from pxr import Usd, UsdGeom
+from pxr import Usd
 
 import newton
 import newton.examples
@@ -26,7 +13,7 @@ from newton.solvers import style3d
 
 
 class Example:
-    def __init__(self, viewer, args=None):
+    def __init__(self, viewer, args):
         # setup simulation parameters first
         self.fps = 60
         self.frame_dt = 1.0 / self.fps
@@ -54,14 +41,13 @@ class Example:
             usd_stage = Usd.Stage.Open(str(asset_path / "garments" / (garment_usd_name + ".usd")))
             usd_prim_garment = usd_stage.GetPrimAtPath(str("/Root/" + garment_usd_name + "/Root_Garment"))
 
-            garment_mesh = newton.usd.get_mesh(usd_prim_garment, load_uvs=True)
-            garment_mesh_indices = garment_mesh.indices
-            garment_mesh_points = garment_mesh.vertices
-            garment_mesh_uv = garment_mesh.uvs * 1e-3
-
-            # Load UV indices separately (not part of Mesh class)
-            garment_prim = UsdGeom.PrimvarsAPI(usd_prim_garment).GetPrimvar("st")
-            garment_mesh_uv_indices = np.array(garment_prim.GetIndices())
+            garment_mesh, garment_mesh_uv_indices = newton.usd.get_mesh(
+                usd_prim_garment,
+                load_uvs=True,
+                preserve_facevarying_uvs=True,
+                return_uv_indices=True,
+            )
+            garment_mesh_uv = garment_mesh.uvs * 1.0e-3
 
             # Avatar
             usd_stage = Usd.Stage.Open(str(asset_path / "avatars" / "Female.usd"))
@@ -77,8 +63,8 @@ class Example:
                 vel=wp.vec3(0.0, 0.0, 0.0),
                 panel_verts=garment_mesh_uv.tolist(),
                 panel_indices=garment_mesh_uv_indices.tolist(),
-                vertices=garment_mesh_points.tolist(),
-                indices=garment_mesh_indices.tolist(),
+                vertices=garment_mesh.vertices.tolist(),
+                indices=garment_mesh.indices.tolist(),
                 density=0.3,
                 scale=1.0,
                 particle_radius=5.0e-3,
@@ -138,16 +124,14 @@ class Example:
             model=self.model,
             iterations=self.iterations,
         )
-        self.solver.precompute(
+        self.solver._precompute(
             builder,
         )
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
         self.control = self.model.control()
 
-        # Create collision pipeline (default: unified)
-        self.collision_pipeline = newton.examples.create_collision_pipeline(self.model, args)
-        self.contacts = self.model.collide(self.state_0, collision_pipeline=self.collision_pipeline)
+        self.contacts = self.model.contacts()
 
         self.viewer.set_model(self.model)
         self.viewer.set_camera(wp.vec3(0.0, -1.7, 1.4), 0.0, -270.0)
@@ -163,7 +147,7 @@ class Example:
             self.graph = None
 
     def simulate(self):
-        self.contacts = self.model.collide(self.state_0, collision_pipeline=self.collision_pipeline)
+        self.model.collide(self.state_0, self.contacts)
         for _ in range(self.sim_substeps):
             self.state_0.clear_forces()
 
@@ -187,7 +171,7 @@ class Example:
         newton.examples.test_particle_state(
             self.state_0,
             "particles are within a reasonable volume",
-            lambda q, qd: newton.utils.vec_inside_limits(q, p_lower, p_upper),
+            lambda q, qd: newton.math.vec_inside_limits(q, p_lower, p_upper),
         )
 
     def render(self):

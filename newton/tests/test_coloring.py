@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import itertools
 import os
@@ -111,7 +99,7 @@ def color_lattice_grid(num_x, num_y):
 
 @unittest.skipUnless(USD_AVAILABLE, "Requires usd-core")
 def test_coloring_trimesh(test, device):
-    from pxr import Usd, UsdGeom  # noqa: PLC0415
+    from pxr import Usd, UsdGeom
 
     with wp.ScopedDevice(device):
         usd_stage = Usd.Stage.Open(os.path.join(warp.examples.get_asset_directory(), "bunny.usd"))
@@ -231,7 +219,7 @@ def test_coloring_trimesh(test, device):
 
 @unittest.skipUnless(USD_AVAILABLE, "Requires usd-core")
 def test_combine_coloring(test, device):
-    from pxr import Usd, UsdGeom  # noqa: PLC0415
+    from pxr import Usd, UsdGeom
 
     with wp.ScopedDevice(device):
         builder1 = ModelBuilder()
@@ -348,7 +336,7 @@ def test_coloring_rigid_body_cable_chain(test, device):
             bend_damping=1.0e-2,
             stretch_stiffness=1.0e6,
             stretch_damping=1.0e-2,
-            key="test_cable",
+            label="test_cable",
         )
 
         # Apply coloring
@@ -421,7 +409,7 @@ def test_coloring_rigid_body_color_algorithms(test, device):
                 bend_damping=1.0e-2,
                 stretch_stiffness=1.0e6,
                 stretch_damping=1.0e-2,
-                key="test_cable",
+                label="test_cable",
             )
 
         # Test MCS algorithm
