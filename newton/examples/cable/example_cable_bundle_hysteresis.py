@@ -10,6 +10,12 @@
 # plastic deformation and hysteresis loops in cable bending behavior,
 # showing realistic memory effects in cable dynamics.
 #
+# Run interactively:
+#   uv run --extra examples python -m newton.examples.cable.example_cable_bundle_hysteresis
+#
+# Run as a test:
+#   uv run --extra examples python -m newton.examples.cable.example_cable_bundle_hysteresis --test --viewer null
+#
 ###########################################################################
 
 import numpy as np
@@ -143,19 +149,17 @@ class Example:
 
         return positions
 
-    def __init__(
-        self,
-        viewer,
-        args=None,
-        num_cables: int = 7,
-        segments: int = 40,
-        with_dahl: bool = True,
-        eps_max: float = 2.0,
-        tau: float = 0.1,
-    ):
+    def __init__(self, viewer, args):
         # Store viewer and arguments
         self.viewer = viewer
         self.args = args
+
+        # CLI-driven configuration. Read here (not from the __main__ block)
+        # so the example browser's reset/switch produces a faithful re-run.
+        eps_max = args.eps_max
+        tau = args.tau
+        with_dahl = not args.no_dahl and eps_max > 0.0 and tau > 0.0
+        self.with_dahl = with_dahl
 
         # Simulation cadence
         self.fps = 60
@@ -167,26 +171,25 @@ class Example:
         self.sim_dt = self.frame_dt / self.sim_substeps
 
         # Cable bundle parameters
-        self.num_cables = num_cables
-        self.num_elements = segments
+        self.num_cables = 7
+        self.num_elements = args.segments
         self.cable_length = 4.0
         self.cable_radius = 0.02
         self.cable_gap_multiplier = 1.1
         bend_stiffness = 1.0e2
-        bend_damping = 5.0e-2
+        bend_damping = 5.0e0
 
         builder = newton.ModelBuilder()
         builder.rigid_gap = 0.05
 
-        # Register solver-specific custom attributes (Dahl plasticity parameters live on the Model).
-        # SolverVBD auto-detects these and enables Dahl friction when present.
+        # Dahl plasticity parameters live on the Model as VBD custom attributes.
         if with_dahl:
             newton.solvers.SolverVBD.register_custom_attributes(builder)
-        builder.gravity = -9.81
+        builder.gravity = (0.0, 0.0, -9.81)
 
         # Set default material properties for cables (cable-to-cable contact)
         builder.default_shape_cfg.ke = 1.0e5  # Contact stiffness
-        builder.default_shape_cfg.kd = 0.0
+        builder.default_shape_cfg.kd = 1.0e1
         builder.default_shape_cfg.mu = 1.0e0  # Friction coefficient
 
         # Bundle layout: align cable center with obstacle center
@@ -199,28 +202,30 @@ class Example:
 
         # Create bundle cross-section layout
         bundle_positions = self.bundle_start_offsets_yz(self.num_cables, self.cable_radius, self.cable_gap_multiplier)
+        self.cable_body_ids: list[list[int]] = []
 
         # Build each cable in the bundle
         for i in range(self.num_cables):
             off_y, off_z = bundle_positions[i]
             cable_start = wp.vec3(start_x, start_y + off_y, start_z + off_z)
 
-            points, quats = newton.utils.create_straight_cable_points_and_quaternions(
+            rod = newton.Rod.create_straight(
                 start=cable_start,
                 direction=wp.vec3(1.0, 0.0, 0.0),
                 length=float(self.cable_length),
-                num_segments=int(self.num_elements),
+                segment_count=int(self.num_elements),
                 twist_total=0.0,
+                radius=self.cable_radius,
             )
 
-            _rod_bodies, _rod_joints = builder.add_rod(
-                positions=points,
-                quaternions=quats,
-                radius=self.cable_radius,
+            rod_bodies, _rod_joints = builder.add_rod(
+                rod=rod,
                 bend_stiffness=bend_stiffness,
                 bend_damping=bend_damping,
                 label=f"bundle_cable_{i}",
+                body_frame_origin="com",
             )
+            self.cable_body_ids.append(rod_bodies)
 
         # Create moving obstacles (capsules arranged along X axis)
         obstacle_cfg = newton.ModelBuilder.ShapeConfig(
@@ -268,7 +273,7 @@ class Example:
             density=builder.default_shape_cfg.density,
             kf=builder.default_shape_cfg.kf,
             ka=builder.default_shape_cfg.ka,
-            mu=2.5,
+            mu=1.0,
             restitution=builder.default_shape_cfg.restitution,
         )
         builder.add_ground_plane(cfg=ground_cfg)
@@ -279,15 +284,16 @@ class Example:
         # Finalize model
         self.model = builder.finalize()
 
-        # Author Dahl friction parameters (per-joint) via custom model attributes.
-        # SolverVBD auto-detects these and enables Dahl friction when present.
+        # Author positive per-joint Dahl parameters to enable Dahl friction.
         if with_dahl and hasattr(self.model, "vbd"):
             self.model.vbd.dahl_eps_max.fill_(float(eps_max))
             self.model.vbd.dahl_tau.fill_(float(tau))
 
+        self.collision_pipeline = newton.CollisionPipeline(self.model)
         self.solver = newton.solvers.SolverVBD(
             self.model,
             iterations=self.sim_iterations,
+            rigid_compliant_alm=True,
         )
 
         # Initialize states and contacts
@@ -295,7 +301,7 @@ class Example:
         self.state_1 = self.model.state()
         self.control = self.model.control()
 
-        self.contacts = self.model.contacts()
+        self.contacts = self.collision_pipeline.contacts()
         self.viewer.set_model(self.model)
 
         # Obstacle kinematics parameters
@@ -320,17 +326,14 @@ class Example:
         # Time tracking for obstacle motion (stored in device array for graph capture)
         self.sim_time_array = wp.zeros(1, dtype=float, device=self.solver.device)
 
-        # Initialize CUDA graph
+        # Initialize graph capture
         self.capture()
 
     def capture(self):
-        """Capture simulation loop into a CUDA graph for optimal GPU performance."""
-        if self.solver.device.is_cuda:
-            with wp.ScopedCapture() as capture:
-                self.simulate()
-            self.graph = capture.graph
-        else:
-            self.graph = None
+        """Capture the simulation loop into a graph for optimal performance."""
+        with wp.ScopedCapture() as capture:
+            self.simulate()
+        self.graph = capture.graph
 
     def simulate(self):
         """Execute all simulation substeps for one frame."""
@@ -372,7 +375,7 @@ class Example:
             # Collision detection and contact refresh cadence.
             refresh_contacts = (substep % self.update_step_interval) == 0
             if refresh_contacts:
-                self.model.collide(self.state_0, self.contacts)
+                self.collision_pipeline.collide(self.state_0, self.contacts)
 
             self.solver.set_rigid_history_update(refresh_contacts)
             self.solver.step(
@@ -406,7 +409,34 @@ class Example:
 
     def test_final(self):
         """Test cable bundle hysteresis simulation for stability and correctness (called after simulation)."""
-        pass
+        if self.sim_time < self.obstacle_release_time + 0.4:
+            return
+
+        rest_positions = self.model.body_q.numpy()[:, :3]
+        body_positions = self.state_0.body_q.numpy()[:, :3]
+        arc_length_ratios = []
+        straightness = []
+        for body_ids in self.cable_body_ids:
+            points = body_positions[body_ids]
+            rest_points = rest_positions[body_ids]
+            arc_length = float(np.linalg.norm(np.diff(points, axis=0), axis=1).sum())
+            rest_arc_length = float(np.linalg.norm(np.diff(rest_points, axis=0), axis=1).sum())
+            end_to_end = float(np.linalg.norm(points[-1] - points[0]))
+            arc_length_ratios.append(arc_length / rest_arc_length)
+            straightness.append(end_to_end / max(arc_length, 1.0e-8))
+
+        arc_length_ratios = np.asarray(arc_length_ratios)
+        straightness = np.asarray(straightness)
+        metrics = f"arc-length ratios={arc_length_ratios.round(3)}, straightness={straightness.round(3)}"
+        if not np.all(np.isfinite(arc_length_ratios)) or not np.all(np.isfinite(straightness)):
+            raise ValueError(f"Cable bundle metrics are not finite: {metrics}")
+        if np.min(arc_length_ratios) < 0.8 or np.max(arc_length_ratios) > 1.2:
+            raise ValueError(f"Cable bundle changed length excessively: {metrics}")
+
+        if self.with_dahl and (np.min(straightness) < 0.5 or np.max(straightness) > 0.9):
+            raise ValueError(f"Dahl cable bundle did not retain plausible curvature: {metrics}")
+        if not self.with_dahl and np.min(straightness) < 0.9:
+            raise ValueError(f"Elastic cable bundle did not recover: {metrics}")
 
     @staticmethod
     def create_parser():
@@ -422,15 +452,4 @@ if __name__ == "__main__":
     parser = Example.create_parser()
     viewer, args = newton.examples.init(parser)
 
-    # Create example and run
-    example = Example(
-        viewer,
-        args,
-        num_cables=7,
-        segments=args.segments,
-        with_dahl=not args.no_dahl and args.eps_max > 0.0 and args.tau > 0.0,
-        eps_max=args.eps_max,
-        tau=args.tau,
-    )
-
-    newton.examples.run(example, args)
+    newton.examples.run(Example(viewer, args), args)

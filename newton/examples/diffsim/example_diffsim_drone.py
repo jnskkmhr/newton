@@ -437,14 +437,9 @@ class Drone:
 
 
 class Example:
-    def __init__(
-        self,
-        viewer,
-        verbose=False,
-        num_rollouts=16,
-        render_rollouts=False,
-        drone_path=DEFAULT_DRONE_PATH,
-    ):
+    def __init__(self, viewer, args):
+        self.args = args
+
         # setup simulation parameters first
         self.fps = 60
         self.frame = 0
@@ -453,11 +448,11 @@ class Example:
         self.sim_substeps = 1
         self.sim_dt = self.frame_dt / self.sim_substeps
 
-        self.verbose = verbose
-        self.rollout_count = num_rollouts
-        self.render_rollouts = render_rollouts
+        self.verbose = args.verbose
+        self.rollout_count = args.num_rollouts
+        self.render_rollouts = args.render_rollouts
         # TODO: Use drone path to load USD asset and draw it
-        self.drone_path = drone_path
+        self.drone_path = args.drone_path
 
         # setup rendering
         self.viewer = viewer
@@ -472,7 +467,7 @@ class Example:
         # We start with -1 since it'll be incremented on the first frame.
         self.target_idx = -1
         # use a Warp array to store the current target so that we can assign
-        # a new target to it while retaining the original CUDA graph.
+        # a new target to it while retaining the original graph.
         self.current_target = wp.array([self.targets[self.target_idx + 1]], dtype=wp.vec3)
 
         # Number of steps to run at each frame for the optimisation pass.
@@ -536,12 +531,9 @@ class Example:
         self.capture()
 
     def capture(self):
-        if wp.get_device().is_cuda:
-            with wp.ScopedCapture() as capture:
-                self.forward_backward()
-            self.graph = capture.graph
-        else:
-            self.graph = None
+        with wp.ScopedCapture() as capture:
+            self.forward_backward()
+        self.graph = capture.graph
 
     def forward_backward(self):
         self.tape = wp.Tape()
@@ -775,34 +767,29 @@ class Example:
 
         self.frame += 1
 
+    @staticmethod
+    def create_parser():
+        parser = newton.examples.create_parser()
+        parser.add_argument(
+            "--verbose", action="store_true", help="Print out additional status messages during execution."
+        )
+        parser.add_argument("--num_rollouts", type=int, default=16, help="Number of drone rollouts.")
+        parser.add_argument(
+            "--drone_path",
+            type=str,
+            default=os.path.join(newton.examples.get_asset_directory(), "crazyflie.usd"),
+            help="Path to the USD file to use as the reference for the drone prim in the output stage.",
+        )
+        parser.add_argument(
+            "--render_rollouts",
+            action="store_true",
+            help="Add rollout trajectories to the output stage.",
+        )
+        return parser
+
 
 if __name__ == "__main__":
-    # Create parser that inherits common arguments and adds example-specific ones
-    parser = newton.examples.create_parser()
-    parser.add_argument("--verbose", action="store_true", help="Print out additional status messages during execution.")
-    parser.add_argument("--num_rollouts", type=int, default=16, help="Number of drone rollouts.")
-    parser.add_argument(
-        "--drone_path",
-        type=str,
-        default=os.path.join(newton.examples.get_asset_directory(), "crazyflie.usd"),
-        help="Path to the USD file to use as the reference for the drone prim in the output stage.",
-    )
-    parser.add_argument(
-        "--render_rollouts",
-        action="store_true",
-        help="Add rollout trajectories to the output stage.",
-    )
-
-    # Parse arguments and initialize viewer
+    parser = Example.create_parser()
     viewer, args = newton.examples.init(parser)
 
-    example = Example(
-        viewer,
-        args.verbose,
-        args.num_rollouts,
-        args.render_rollouts,
-        args.drone_path,
-    )
-
-    # Run example
-    newton.examples.run(example, args)
+    newton.examples.run(Example(viewer, args), args)

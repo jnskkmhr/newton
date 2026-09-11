@@ -101,7 +101,7 @@ class Example:
         self.collision_pipeline = newton.CollisionPipeline(
             self.model,
             broad_phase="explicit",
-            soft_contact_margin=0.001,
+            soft_contact_gap=0.001,
             requires_grad=True,
         )
 
@@ -216,12 +216,9 @@ class Example:
         return model
 
     def capture(self):
-        if wp.get_device().is_cuda:
-            with wp.ScopedCapture() as capture:
-                self.forward_backward()
-            self.graph = capture.graph
-        else:
-            self.graph = None
+        with wp.ScopedCapture() as capture:
+            self.forward_backward()
+        self.graph = capture.graph
 
     def forward_backward(self):
         self.tape = wp.Tape()
@@ -348,7 +345,7 @@ class Example:
                 newton.GeoType.BOX,
                 (0.1, 0.1, 0.1),
                 wp.array([wp.transform(self.target, wp.quat_identity())], dtype=wp.transform),
-                wp.array([wp.vec3(0.0, 0.0, 0.0)], dtype=wp.vec3),
+                wp.array([wp.vec3(0.5, 0.0, 0.5)], dtype=wp.vec3),
             )
             self.viewer.log_lines(
                 f"/traj_{self.train_iter - 1}",
@@ -379,5 +376,4 @@ if __name__ == "__main__":
     parser = Example.create_parser()
     viewer, args = newton.examples.init(parser)
 
-    example = Example(viewer, args)
-    newton.examples.run(example, args)
+    newton.examples.run(Example(viewer, args), args)

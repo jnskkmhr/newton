@@ -31,7 +31,7 @@ def _setup_pendulum(
     if parent_xform is None:
         parent_xform = wp.transform_identity()
 
-    builder = newton.ModelBuilder(gravity=-9.81, up_axis=newton.Axis.Z)
+    builder = newton.ModelBuilder(gravity=(0.0, 0.0, -9.81), up_axis=newton.Axis.Z)
     builder.request_state_attributes("body_parent_f")
 
     link = builder.add_link()
@@ -124,7 +124,7 @@ def test_apply_body_f(test, device, solver_fn):
     Forces/torques are applied in non-compliant directions to verify constraint forces.
     """
     dt = 5e-3
-    builder = newton.ModelBuilder(gravity=-9.81, up_axis=newton.Axis.Z)
+    builder = newton.ModelBuilder(gravity=(0.0, 0.0, -9.81), up_axis=newton.Axis.Z)
     builder.request_state_attributes("body_parent_f")
 
     link0 = builder.add_link()
@@ -215,6 +215,30 @@ for device in devices:
         test_apply_body_f,
         devices=[device],
         solver_fn=lambda model: newton.solvers.SolverMuJoCo(model, use_mujoco_cpu=False),
+    )
+
+    # Featherstone uses the same RNEA math under the hood, so the same
+    # one-step assertions apply with the same tolerances.
+    add_function_test(
+        TestParentForce,
+        "test_parent_force_static_pendulum_featherstone",
+        test_parent_force_static_pendulum,
+        devices=[device],
+        solver_fn=newton.solvers.SolverFeatherstone,
+    )
+    add_function_test(
+        TestParentForce,
+        "test_parent_force_centrifugal_featherstone",
+        test_parent_force_centrifugal,
+        devices=[device],
+        solver_fn=newton.solvers.SolverFeatherstone,
+    )
+    add_function_test(
+        TestParentForce,
+        "test_apply_body_f_featherstone",
+        test_apply_body_f,
+        devices=[device],
+        solver_fn=newton.solvers.SolverFeatherstone,
     )
 
 

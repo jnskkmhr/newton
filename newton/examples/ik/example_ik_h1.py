@@ -120,10 +120,9 @@ class Example:
     # ----------------------------------------------------------------------
     def capture(self):
         self.graph = None
-        if wp.get_device().is_cuda:
-            with wp.ScopedCapture() as cap:
-                self.simulate()
-            self.graph = cap.graph
+        with wp.ScopedCapture() as cap:
+            self.simulate()
+        self.graph = cap.graph
 
     def simulate(self):
         self.solver.step(self.joint_q, self.joint_q, iterations=self.ik_iters)
@@ -169,5 +168,4 @@ class Example:
 if __name__ == "__main__":
     # Parse arguments and initialize viewer
     viewer, args = newton.examples.init()
-    example = Example(viewer, args)
-    newton.examples.run(example, args)
+    newton.examples.run(Example(viewer, args), args)

@@ -118,14 +118,11 @@ class Example:
         self.capture()
 
     def capture(self):
-        if wp.get_device().is_cuda:
-            # Capture all the kernel launches into a CUDA graph so that they can
-            # all be run in a single graph launch, which helps with performance.
-            with wp.ScopedCapture() as capture:
-                self.forward_backward()
-            self.graph = capture.graph
-        else:
-            self.graph = None
+        # Capture all the kernel launches into a graph so that they can all be
+        # run in a single graph launch, which helps with performance.
+        with wp.ScopedCapture() as capture:
+            self.forward_backward()
+        self.graph = capture.graph
 
     def forward_backward(self):
         self.tape = wp.Tape()
@@ -287,5 +284,4 @@ if __name__ == "__main__":
     if isinstance(viewer, newton.viewer.ViewerGL):
         viewer.show_particles = True
 
-    example = Example(viewer, args)
-    newton.examples.run(example, args)
+    newton.examples.run(Example(viewer, args), args)

@@ -104,7 +104,7 @@ class Example:
         self.init_materials(options, self.model)
 
         # Initialize MPM solver and add supplemental state variables
-        self.solver = SolverImplicitMPM(self.model, mpm_options)
+        self.solver = SolverImplicitMPM(self.model, config=mpm_options)
 
         self.viewer.set_model(self.model)
 
@@ -406,6 +406,4 @@ if __name__ == "__main__":
 
     viewer, args = newton.examples.init(parser)
 
-    example = Example(viewer, args)
-
-    newton.examples.run(example, args)
+    newton.examples.run(Example(viewer, args), args)
