@@ -5,7 +5,6 @@ import itertools
 import unittest
 from contextlib import contextmanager
 from itertools import product
-from unittest.mock import patch
 
 import numpy as np
 import warp as wp
@@ -677,49 +676,6 @@ def _make_mpm_config(grid_type="dense", integration_scheme="pic", solver="jacobi
     config.tolerance = 0.0
     config.warmstart_mode = "grid"
     return config
-
-
-def test_particle_grid_mapping_check(test, device):
-    """Reject a missing active particle before changing its material state."""
-    builder = _make_mpm_particle_builder(gravity=(0.0, 0.0, 0.0))
-    model = builder.finalize(device=device)
-    config = _make_mpm_config(grid_type="fixed")
-    config.check_particle_grid_mapping = True
-    solver = SolverImplicitMPM(model, config)
-    state = model.state()
-    solver.step(state, state, None, None, 0.001)
-    test.assertTrue(np.isfinite(state.particle_q.numpy()).all())
-
-    # Inject the missing-cell result of the sparse lookup regression.
-    original_quadrature = fem.PicQuadrature
-
-    def missing_particle(*args, **kwargs):
-        pic = original_quadrature(*args, **kwargs)
-        cells = pic.cell_indices.numpy().copy()
-        cells[0] = -1
-        pic.cell_indices = wp.array(cells, dtype=wp.int32, device=device)
-        return pic
-
-    fields = [
-        state.particle_q,
-        state.particle_qd,
-        state.mpm.particle_elastic_strain,
-        state.mpm.particle_Jp,
-        state.mpm.particle_stress,
-    ]
-    before = [array.numpy().copy() for array in fields]
-    with patch.object(fem, "PicQuadrature", side_effect=missing_particle):
-        with test.assertRaisesRegex(RuntimeError, "active particle 0 has no grid cell"):
-            solver.step(state, state, None, None, 0.001)
-    for expected, array in zip(before, fields, strict=True):
-        np.testing.assert_array_equal(array.numpy(), expected)
-
-    # Inactive particles are intentionally allowed to have no grid contribution.
-    flags = solver._mpm_model.particle_flags.numpy()
-    flags[0] = 0
-    solver._mpm_model.particle_flags.assign(flags)
-    with patch.object(fem, "PicQuadrature", side_effect=missing_particle):
-        solver._particles_to_cells(state.particle_q)
 
 
 def test_expanded_iterative_solver_names(test, device):
@@ -2408,14 +2364,6 @@ add_function_test(
     check_output=False,
 )
 
-
-add_function_test(
-    TestImplicitMPM,
-    "test_particle_grid_mapping_check",
-    test_particle_grid_mapping_check,
-    devices=devices,
-    check_output=False,
-)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2, failfast=True)

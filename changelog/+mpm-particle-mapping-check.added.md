@@ -1,1 +1,0 @@
-Add `SolverImplicitMPM.Config.check_particle_grid_mapping` to report active particles missing from grid integration before material state is updated. This optional point-integration diagnostic synchronizes the device and requires outer CUDA graph capture to be disabled.
