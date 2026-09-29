@@ -1320,3 +1320,14 @@ def scatter_field_dof_values(
 
 wp.overload(scatter_field_dof_values, {"src": wp.array[wp.vec3], "dest": wp.array[wp.vec3]})
 wp.overload(scatter_field_dof_values, {"src": wp.array[vec6], "dest": wp.array[vec6]})
+
+
+@wp.kernel
+def find_missing_active_particle(
+    cell_indices: wp.array[int],
+    particle_flags: wp.array[int],
+    first_missing: wp.array[int],
+):
+    particle = wp.tid()
+    if (particle_flags[particle] & newton.ParticleFlags.ACTIVE) != 0 and cell_indices[particle] < 0:
+        wp.atomic_min(first_missing, 0, particle)
