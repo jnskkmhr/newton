@@ -55,6 +55,7 @@ from .implicit_mpm_solver_kernels import (
     compute_eigenvalues,
     compute_unilateral_strain_offset,
     fill_uniform_color_block_indices,
+    find_missing_active_particle,
     free_velocity,
     integrate_active_fraction,
     integrate_collider_fraction,
@@ -857,6 +858,14 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         A capacity-bounded ``"sparse"`` grid is rebuilt in place. Dense grids
         read dynamic bounds on the host.
         """
+        check_particle_grid_mapping: bool = False
+        """Report active particles without grid cells before updating material state.
+
+        This diagnostic check supports point-based integration, synchronizes one
+        integer from the device per mapping, and requires outer CUDA graph capture
+        to be disabled.
+        """
+
         grid_padding: int = 0
         """Number of empty cells to add around particles when allocating the grid."""
         max_active_cell_count: int = -1
@@ -1452,6 +1461,8 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
 
         self.grid_padding = config.grid_padding
         self.grid_type = config.grid_type
+        self.check_particle_grid_mapping = config.check_particle_grid_mapping
+        self._first_missing_particle = None
         self.max_active_cell_count = config.max_active_cell_count
         self.max_leaf_node_count = _validate_sparse_grid_node_capacity(
             "max_leaf_node_count", config.max_leaf_node_count
@@ -2680,6 +2691,12 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
     def _particles_to_cells(self, positions: wp.array) -> fem.PicQuadrature:
         """Rebuild the grid and grid partition around particles, then assign particles to grid cells."""
 
+        if self.check_particle_grid_mapping:
+            if positions.device.is_capturing:
+                raise RuntimeError("Particle-grid mapping checks require outer CUDA graph capture to be disabled.")
+            if self.gimp:
+                raise ValueError("Particle-grid mapping checks currently require point-based integration.")
+
         # Rebuild grid
 
         # The fixed grid and the rebuildable sparse grid both persist across steps: the
@@ -2755,7 +2772,27 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
                     use_domain_element_indices=use_domain_element_indices,
                 )
 
+        if self.check_particle_grid_mapping:
+            self._validate_particle_grid_mapping(pic)
         return pic
+
+    def _validate_particle_grid_mapping(self, pic: fem.PicQuadrature) -> None:
+        particle_count = self.model.particle_count
+        if self._first_missing_particle is None:
+            self._first_missing_particle = wp.empty(1, dtype=wp.int32, device=self.model.device)
+        self._first_missing_particle.fill_(particle_count)
+        wp.launch(
+            find_missing_active_particle,
+            dim=particle_count,
+            inputs=[pic.cell_indices, self._mpm_model.particle_flags, self._first_missing_particle],
+            device=self.model.device,
+        )
+        particle = int(self._first_missing_particle.numpy()[0])
+        if particle < particle_count:
+            raise RuntimeError(
+                f"Implicit MPM active particle {particle} has no grid cell (cell index -1). "
+                "Stopped before material calculations or particle-state updates."
+            )
 
     def _particle_grid_locations_gimp(
         self,
