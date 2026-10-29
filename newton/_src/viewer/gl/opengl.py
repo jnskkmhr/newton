@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import ctypes
+import logging
 import os
 import sys
 import warnings
@@ -11,6 +12,7 @@ import warp as wp
 
 from newton import Mesh
 
+from ...exceptions import NewtonWarning
 from ...utils.mesh import compute_vertex_normals
 from ...utils.texture import normalize_texture
 from ..utils import OPAQUE_OPACITY_THRESHOLD
@@ -25,6 +27,8 @@ from .shaders import (
     ShaderSky,
     ShadowShader,
 )
+
+logger = logging.getLogger(__name__)
 
 ENABLE_GL_CHECKS = False
 _CUDA_INTEROP_WARNINGS: set[str] = set()
@@ -44,7 +48,7 @@ def _register_cuda_gl_buffer(buffer, device):
         if "unavailable" not in _CUDA_INTEROP_WARNINGS:
             warnings.warn(
                 "CUDA-OpenGL interoperability is unavailable; using host buffer uploads.",
-                RuntimeWarning,
+                NewtonWarning,
                 stacklevel=3,
             )
             _CUDA_INTEROP_WARNINGS.add("unavailable")
@@ -71,8 +75,7 @@ def check_gl_error():
         import traceback  # noqa: PLC0415
 
         stack = traceback.format_stack()
-        print(f"OpenGL error: {error_name} ({error:#x})")
-        print(f"Called from: {''.join(stack[-2:-1])}")
+        logger.error("OpenGL error: %s (%#x)\nCalled from: %s", error_name, error, "".join(stack[-2:-1]))
 
 
 def _upload_texture_from_file(gl, texture_image: np.ndarray) -> int:
@@ -180,6 +183,8 @@ def fill_line_vertex_data(
 class MeshGL:
     """Encapsulates mesh data and OpenGL buffers for a shape."""
 
+    _DEFAULT_COLOR = (0.7, 0.5, 0.3)
+
     def __init__(
         self,
         num_points,
@@ -210,7 +215,9 @@ class MeshGL:
         self.normals = None  # scratch buffer used during normal recomputation
         self.texture_id = None
         self._texture_file_signature: tuple[str, int, int] | None = None
+        self._texture_source = None
         self.opacity = 1.0
+        self._capsule_instancing = False
 
         # Set up vertex attributes in the packed format the shaders expect
         self.vertex_byte_size = 12 + 12 + 8
@@ -269,7 +276,8 @@ class MeshGL:
         gl.glBindVertexArray(0)
 
         # Per-mesh albedo and material (applied in render()).
-        self.color = (0.7, 0.5, 0.3)
+        self.color = self._DEFAULT_COLOR
+        self._color_is_default = True
         self.material = (0.5, 0.0, 0.0, 0.0)
 
         self.vertex_cuda_buffer = None
@@ -301,7 +309,7 @@ class MeshGL:
             # Ignore any errors if the GL context has already been torn down
             pass
 
-    def update(self, points, indices, normals, uvs, texture=None, opacity=None):
+    def update(self, points, indices, normals, uvs, texture=None, opacity=None, *, reuse_texture=False):
         """Update vertex positions in the VBO.
 
         Args:
@@ -376,7 +384,7 @@ class MeshGL:
             else:
                 gl.glBufferData(gl.GL_ARRAY_BUFFER, host_vertices.nbytes, host_vertices.ctypes.data, gl.GL_STATIC_DRAW)
 
-        self.update_texture(texture)
+        self.update_texture(texture, reuse_texture=reuse_texture)
 
     def recompute_normals(self):
         if self._points is None or self.indices is None:
@@ -390,8 +398,10 @@ class MeshGL:
             device=self.device,
         )
 
-    def update_texture(self, texture=None):
-        """Reuse unchanged local image files; upload array inputs on every update."""
+    def update_texture(self, texture=None, *, reuse_texture=False):
+        """Reuse immutable visuals and unchanged files; otherwise upload the texture."""
+        if reuse_texture and texture is self._texture_source:
+            return
         signature = None
         if isinstance(texture, (str, os.PathLike)):
             path = os.path.abspath(os.fspath(texture))
@@ -419,6 +429,7 @@ class MeshGL:
                 except Exception:
                     pass
                 self.texture_id = None
+            self._texture_source = texture
             return
 
         if self.texture_id is not None:
@@ -428,11 +439,13 @@ class MeshGL:
                 pass
             self.texture_id = None
 
+        self._texture_source = None
         texture_id = _upload_texture_from_file(gl, texture_image)
-        if not texture_id:
-            return
-        self.texture_id = texture_id
-        self._texture_file_signature = signature
+        if texture_id:
+            self.texture_id = texture_id
+            self._texture_file_signature = signature
+        # Cache deterministic rejection, but leave exceptions retryable.
+        self._texture_source = texture
 
     def render(self):
         if not self.hidden:
@@ -455,6 +468,7 @@ class MeshGL:
 
             gl.glBindVertexArray(self.vao)
             gl.glVertexAttrib1f(9, self.opacity)
+            gl.glVertexAttrib1f(10, 0.0)
             gl.glDrawElements(gl.GL_TRIANGLES, self.num_indices, gl.GL_UNSIGNED_INT, None)
             gl.glBindVertexArray(0)
 
@@ -1107,6 +1121,7 @@ class MeshInstancerGL:
             gl.glBindTexture(gl.GL_TEXTURE_2D, RendererGL.get_fallback_texture())
 
         gl.glBindVertexArray(self.vao)
+        gl.glVertexAttrib1f(10, float(self.mesh._capsule_instancing))
         gl.glDrawElementsInstanced(
             gl.GL_TRIANGLES, self.mesh.num_indices, gl.GL_UNSIGNED_INT, None, self.active_instances
         )
@@ -1218,7 +1233,7 @@ class RendererGL:
             # remember sample count for later (e.g., resolving FBO)
             self.msaa_samples = 4
         except pyglet.window.NoSuchConfigException:
-            print("Warning: Could not get MSAA config, falling back to non-AA.")
+            logger.warning("Could not get MSAA config, falling back to non-AA.")
             self.window = pyglet.window.Window(
                 width=screen_width,
                 height=screen_height,
@@ -1247,6 +1262,8 @@ class RendererGL:
         else:
             self.headless = headless
         self.app = pyglet.app
+        # Closing the last window sets pyglet's process-wide exit flag.
+        self.app.event_loop.has_exit = False
 
         # making window current opengl rendering context
         self._make_current()
@@ -1871,7 +1888,7 @@ class RendererGL:
             )
 
             if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
-                print("Framebuffer is not complete!", flush=True)
+                logger.error("Framebuffer is not complete!")
                 gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
                 sys.exit(1)
 
@@ -1928,7 +1945,7 @@ class RendererGL:
             )
 
             if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
-                print("Warning: MSAA framebuffer incomplete, disabling MSAA.")
+                logger.warning("MSAA framebuffer incomplete, disabling MSAA.")
                 self.msaa_samples = 0
             gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
 
@@ -1958,6 +1975,7 @@ class RendererGL:
                 "ViewerGL: weighted order-independent transparency is unavailable on this GL context "
                 "(requires independent blending and a float OIT framebuffer). Falling back to unsorted "
                 "alpha blending, so overlapping transparent surfaces may blend in the wrong order.",
+                NewtonWarning,
                 stacklevel=2,
             )
         return self._oit_supported
@@ -2175,7 +2193,6 @@ class RendererGL:
             diffuse_scale=self.diffuse_scale,
             specular_scale=self.specular_scale,
             spotlight_enabled=self.spotlight_enabled,
-            shadow_extents=self.shadow_extents,
             exposure=self.exposure,
             oit_depth_reference=self.camera.pivot_distance,
         )
