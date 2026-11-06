@@ -1,0 +1,98 @@
+{
+  "arguments": {
+    "sand_depth": 0.45,
+    "jitter": 0.012,
+    "mass": 5.0,
+    "seconds": 6.0,
+    "settle": 0.5,
+    "speed": 0.05,
+    "seed": 42,
+    "device": "cuda:0",
+    "output": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d45"
+  },
+  "newton_path": "/home/jkamohara/isaac/newton/newton/__init__.py",
+  "dt_s": 0.0025,
+  "mpm_hz": 400,
+  "mjwarp_hz": 800,
+  "voxel_size_m": 0.02,
+  "particles_per_cell": 1.25,
+  "resolution": [
+    100,
+    100,
+    29
+  ],
+  "cell_size_m": [
+    0.016,
+    0.016,
+    0.015517241379310345
+  ],
+  "particle_count": 290000,
+  "particle_mass_kg": 0.006355862068965517,
+  "density_kg_m3": 1600.0,
+  "material": {
+    "young_modulus": 1000000000000000.0,
+    "poisson_ratio": 0.3,
+    "friction": 0.48,
+    "yield_pressure": 1000000000000000.0,
+    "tensile_yield_ratio": 0.0,
+    "yield_stress": 0.0,
+    "hardening": 0.0,
+    "dilatancy": 0.0,
+    "viscosity": 0.0
+  },
+  "mpm_config": {
+    "max_iterations": 25,
+    "tolerance": 0.0001,
+    "solver": "auto",
+    "warmstart_mode": "auto",
+    "collider_velocity_mode": "forward",
+    "voxel_size": 0.02,
+    "grid_type": "sparse",
+    "grid_padding": 0,
+    "max_active_cell_count": 300000,
+    "max_leaf_node_count": -1,
+    "max_lower_node_count": -1,
+    "max_upper_node_count": -1,
+    "transfer_scheme": "apic",
+    "integration_scheme": "pic",
+    "critical_fraction": 0.0,
+    "air_drag": 1.0,
+    "collider_normal_from_sdf_gradient": false,
+    "collider_basis": "pic27",
+    "strain_basis": "P0",
+    "velocity_basis": "Q1",
+    "separate_worlds": false
+  },
+  "surface_particle_count": 2820,
+  "mpm_collider_mass_kg": [
+    5.000000476837158
+  ],
+  "versions": {
+    "warp-lang": "1.19.0.dev0",
+    "mujoco-warp": "3.12.0",
+    "mujoco": "3.12.0",
+    "numpy": "2.5.1"
+  },
+  "newton_commit": "66d9d50dde76f2d88184682028e6f9a886cb20f5",
+  "source_sha256": {
+    "_src/solvers/implicit_mpm/render_grains.py": "677b38cbded8c418e363f44ec49d1c1a1224697397326c85aa405d636b7dfe28",
+    "_src/solvers/implicit_mpm/solver_implicit_mpm.py": "fe45b561b1065f21bbd4d7bfa033933e5e38df6faec0ef217552392687448f68",
+    "_src/solvers/implicit_mpm/particle_surface_colliders.py": "d117bec30e4febdf8cb37ff52d3199f73a6c705a800e60e31822207567514afa",
+    "_src/solvers/implicit_mpm/rheology_solver_kernels.py": "66baec554b7b4a849323cbe4d8c0b860546ddbf2e2b394b4d659a409c13bae69",
+    "_src/solvers/implicit_mpm/__init__.py": "c0951f53ccd4911a286eefe6f07f714cef53d3007ceaedc950bcdabe5ce0af05",
+    "_src/solvers/implicit_mpm/rasterized_collisions.py": "206424600b9956f48bc97aad17177b44892099a4d20e0602e4466bd9a36c8b73",
+    "_src/solvers/implicit_mpm/implicit_mpm_model.py": "d10a34b28f05c07a7511ee0165e2dea08261b1c040b2bfe4dbffb9c46f9c4615",
+    "_src/solvers/implicit_mpm/implicit_mpm_solver_kernels.py": "65a1df46a96de03dd79de12a91025e072cb056a6c477b96b2e5cbeed08ad05ec",
+    "_src/solvers/implicit_mpm/contact_solver_kernels.py": "ce9ef5848ceffcb7dfe6c2d006e15979e1800b58ae03b57511d105ce8da2a1ee",
+    "_src/solvers/implicit_mpm/solve_rheology.py": "7bd07f9a04949b9a7d9d7fceb6e24e52b356206f6779d87e22356e5b5e91f366",
+    "_src/solvers/coupled/admm_utils.py": "ea657c1873673c7d1a3b176920263d8b19cce54bd9a0b3787c1cc1240e5812a0",
+    "_src/solvers/coupled/solver_coupled_proxy.py": "e481e07346fd4b569b22b34a722ae44a3ced10f8413f8c2da594a446e6afd2e1",
+    "_src/solvers/coupled/admm_contact_stream.py": "e9542baaac7433e905c9d1a9dfb5e0147b44adb3fb47f6698c3f7120f6e8de63",
+    "_src/solvers/coupled/proxy_utils.py": "f73c815e45634500112c314342153a7f8195ebffd700d96f9fd29a2799442f91",
+    "_src/solvers/coupled/interface.py": "c8d1f160d4ffcac22841e870f3cd0375c7aad30f799549052692097ab4a1fdb9",
+    "_src/solvers/coupled/solver_coupled.py": "4ed9d57ced8ad02c4a6e785e20dd46f68371ba604e19a1182bde40d4aa9875ca",
+    "_src/solvers/coupled/model_view.py": "ccd74638c9558cf4dda692ccc609a51bb46b8ea640203c41b07deb6970368ac4",
+    "_src/solvers/coupled/__init__.py": "ebf825c41ccfe1ca4fa2f0ad819f9938c3beff7820acc4ebc98df8ef4449e97d",
+    "_src/solvers/coupled/solver_coupled_admm.py": "ca42c1eebfe4e72288defd0cfbd4fd3530be9f8f6c5920043d75dc890eb03aad"
+  }
+}

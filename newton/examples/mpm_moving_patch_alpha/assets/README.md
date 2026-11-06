@@ -1,0 +1,65 @@
+# Rover wheel assets
+
+Both standalone MJCF files define the complete rover: a free chassis, four hinge
+wheel joints, visual rotation markers, and four velocity actuators.
+
+- `rover_flat_wheel.xml`: a convex 24-sided tire mesh per wheel.
+- `rover_grouser_wheel.xml`: a convex 24-sided core plus twelve separate tapered
+  convex lug meshes per wheel. Each lug is an eight-vertex mesh. The protruding
+  tread is not represented by a primitive or a single convex hull of the wheel.
+
+The separate convex pieces retain the gaps between lugs. Making a single convex
+hull around the complete wheel would fill these gaps and remove the grouser
+contact geometry. All pieces are rigidly attached to their wheel body; no extra
+joints or dynamic bodies are introduced. Mesh vertices and faces are embedded
+in the XML, so no external mesh files or asset downloads are required.
+
+| Setting | Value |
+|---|---:|
+| Nominal outer wheel radius | Flat: 0.24 m; grouser: 0.27 m |
+| Track width | 0.72 m |
+| Wheel width | 0.14 m |
+| Chassis mass | 30 kg |
+| Wheel mass | 2.026704 kg each |
+| Total rover mass | 38.106817 kg |
+| Velocity actuator gain | 20 N m s/rad |
+| Motor torque limit | 30 N m per wheel |
+
+The grouser core radius is 0.19 m and lugs protrude approximately 0.08 m. Each
+lug tapers from 0.036 m tangential width at its base to 0.016 m at its tip. The
+wheel-radius metadata is updated so differential-drive commands use the new
+outer radius. The two
+assets use the same explicit approximate inertias (based on the original flat
+wheel), so selecting grousers changes contact geometry without changing mass,
+inertia, or motor strength. Friction settings are also matched. The colored
+sidewall markers are visual only.
+
+The default is `grouser`. Select either asset at startup:
+
+```bash
+uv run --extra examples -m newton.examples mujoco_mpm_coupled_solver_moving_patch_rover --wheel-type grouser
+uv run --extra examples -m newton.examples mujoco_mpm_coupled_solver_moving_patch_rover --wheel-type flat
+uv run --extra examples -m newton.examples mujoco_mpm_coupled_solver_moving_patch_rover --wheel-type grouser --terrain-type slope --slope-angle 30
+```
+
+These examples retain moving-patch terrain, differential-drive commands, two-way
+coupling, camera tracking, and video recording. The grouser version has more
+collision shapes and can cost more to simulate. Additional traction is not
+guaranteed: the current MPM voxel width is comparable to the grouser height,
+and steep-slope behavior depends on sand friction, slip, loading, and motor torque.
+A grid-resolution study is needed before treating the geometry as a validated
+traction model.
+
+## Validation
+
+```bash
+uv run --extra dev -m newton.tests.test_mpm_rover_assets
+```
+
+Checks cover native MuJoCo loading, Newton topology and velocity drives, matched
+mass/inertia, motor force limits, convex outward-facing collision meshes, and
+noncolliding visual markers. Before the taller/thinner lug revision (with 0.05 m protrusion), both assets passed a rendered 400-step slope run
+with the same 30-degree slope and 0.5 m/s uphill wheel command. In this single
+four-second run, world-X displacement was -2.79 m for grousers and -3.25 m for
+flat wheels. Both slid downhill; this is a smoke-test observation, not a
+validated traction benchmark or a demonstrated climbing capability.

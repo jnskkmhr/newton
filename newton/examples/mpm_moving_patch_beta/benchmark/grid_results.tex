@@ -1,0 +1,16 @@
+Sparse allocation does not eliminate work on particles throughout a filled sand bed. Both full-terrain methods increase particle count from 972,000 at 3\,m to 10,800,000 at 10\,m. The following table compares the largest size completed by both methods for each scene. Times are mean $\pm$ standard deviation in milliseconds; memory is the measured mean in GiB.
+\begin{center}\small\begin{tabular}{lrrrrr}\toprule
+Scene & Side [m] & Fixed [ms] & Sparse [ms] & Fixed [GiB] & Sparse [GiB] \\\midrule
+Box & 8 & $80.96\pm6.23$ & $186.86\pm2.68$ & 12.87 & 22.98 \\
+Rover & 7 & $67.18\pm6.65$ & $148.46\pm3.17$ & 14.41 & 22.63 \\
+G1 & 7 & $66.05\pm1.66$ & $142.98\pm2.39$ & 14.33 & 22.41 \\
+\bottomrule\end{tabular}\end{center}
+Sparse has a lower mean step time in 0 of 16 matched size/scene comparisons. These results describe the tested reserved-capacity configuration; they do not establish an inherent advantage for either grid representation. No component-level profiling was performed to separate grid rebuilding, material solving, and capacity-related costs.
+5 attempts failed during GPU memory allocation with the tested settings.
+4 initialization workers were terminated by SIGKILL before measurements; the cause could not be confirmed because kernel logs were not accessible.
+Failed measurements are excluded from means and shown as missing plot points. The affected cases and failure messages are listed in the accompanying summary data.
+Box sparse: failed runs at side lengths 10, 9\,m.
+Rover fixed: failed runs at side lengths 10\,m.
+Rover sparse: failed runs at side lengths 10, 8, 9\,m.
+G1 fixed: failed runs at side lengths 10\,m.
+G1 sparse: failed runs at side lengths 10, 8, 9\,m.

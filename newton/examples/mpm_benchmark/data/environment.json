@@ -1,0 +1,6 @@
+{
+  "python_environment": "/home/jkamohara/isaac/IsaacLab/.venv",
+  "uv_lock_sha256": "a5ca03f87bc75fb39e2f0847031d7abee0e217e97c3e40298bedb3f60c116f64",
+  "isaaclab_imported": false,
+  "simulation_source": "/home/jkamohara/isaac/newton/newton"
+}

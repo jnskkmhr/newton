@@ -1,0 +1,6 @@
+{
+  "newton/examples/mpm_moving_patch_alpha/benchmark/box_2026_09_28/rerun.py": "a17abf82117adc0ab605a69e933ba0e4b9d14e1dbb57b244b1b4c9948bb45477",
+  "newton/examples/mpm_moving_patch_alpha/benchmark/box_2026_09_28/plot_results.py": "9fb8bfc080e07f7dffd426de660aa98bced4a064a8862d9597dcc024495714eb",
+  "newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py": "6de26e3163cec47191bfb58e84efde450bbe65a354258f1053b3d5d12c4fd75d",
+  "newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/plot_results.py": "f1e05d75032f590768a32893246bfc131ed86ab491a9db0e0b9495f3629d9364"
+}

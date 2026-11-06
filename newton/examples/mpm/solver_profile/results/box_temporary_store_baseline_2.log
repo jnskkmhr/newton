@@ -1,0 +1,9 @@
+Warp DeprecationWarning: warp.config.quiet is deprecated; use warp.config.log_level = warp.LOG_WARNING to suppress the init banner.
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 5090" (31 GiB, sm_120, mempool enabled)
+   Kernel cache:
+     /home/jkamohara/.cache/warp/1.17.0
+box diagnostic=False: {'mean': 23.541969392681494, 'std': 3.162696780826001, 'count': 120} -> newton/examples/mpm/solver_profile/results/box_temporary_store_baseline_2.json

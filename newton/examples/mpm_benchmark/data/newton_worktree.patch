@@ -1,0 +1,135 @@
+diff --git a/newton/_src/solvers/implicit_mpm/implicit_mpm_model.py b/newton/_src/solvers/implicit_mpm/implicit_mpm_model.py
+index 3e1eb5b4..24ae505c 100644
+--- a/newton/_src/solvers/implicit_mpm/implicit_mpm_model.py
++++ b/newton/_src/solvers/implicit_mpm/implicit_mpm_model.py
+@@ -61,6 +61,48 @@ def _particle_parameter(
+         return wp.full(num_particles, model_value, dtype=float) if model_scale is None else model_value * model_scale
+ 
+ 
++@wp.kernel
++def _exclude_collider_particles(ids: wp.array[int], flags: wp.array[int]):
++    i = ids[wp.tid()]
++    flags[i] = flags[i] & ~int(newton.ParticleFlags.ACTIVE)
++
++
++@wp.kernel
++def _refresh_particle_properties(
++    radius: wp.array[float],
++    mass: wp.array[float],
++    transfer_flags: wp.array[int],
++    volume: wp.array[float],
++    density: wp.array[float],
++    material_flags: wp.array[int],
++    material_volume: wp.array[float],
++    young_modulus: wp.array[float],
++    hardening: wp.array[float],
++    viscosity: wp.array[float],
++    dilatancy: wp.array[float],
++    extrema: wp.array[float],
++):
++    i = wp.tid()
++    v = 8.0 * radius[i] * radius[i] * radius[i]
++    volume[i] = v
++    density[i] = 0.0
++    if v > 0.0:
++        density[i] = mass[i] / v
++    flags = transfer_flags[i]
++    if flags & int(newton.ParticleFlags.PROXY):
++        flags = flags & ~int(newton.ParticleFlags.ACTIVE)
++    material_flags[i] = flags
++    material_volume[i] = 0.0
++    if flags & int(newton.ParticleFlags.ACTIVE):
++        material_volume[i] = v
++        wp.atomic_min(extrema, 0, young_modulus[i])
++        wp.atomic_max(extrema, 1, hardening[i])
++        if viscosity[i] > 0.0:
++            wp.atomic_max(extrema, 2, 1.0)
++        if dilatancy[i] > 0.0:
++            wp.atomic_max(extrema, 3, 1.0)
++
++
+ def _merge_meshes(
+     points: list[np.array] = (),
+     indices: list[np.array] = (),
+@@ -369,6 +411,50 @@ class ImplicitMPMModel:
+ 
+         self._refresh_particle_flags_and_extrema()
+ 
++    def notify_particle_properties_changed(self):
++        """Refresh changing particle properties in stable device arrays.
++
++        Material arrays and collider membership must already be current. The
++        four extrema needed by Python solver dispatch are the only readback.
++        """
++        model = self.model
++        if model.particle_count != self.particle_volume.size:
++            raise ValueError("Particle count changes require rebuilding the MPM solver")
++        self.particle_radius = model.particle_radius
++        if not hasattr(self, "_particle_property_extrema"):
++            self._particle_property_extrema = wp.empty(4, dtype=float, device=model.device)
++        # max_hardening has historically been zero only for an empty material set.
++        self._particle_property_extrema.assign([math.inf, -math.inf, 0.0, 0.0])
++        wp.copy(self.particle_flags, model.particle_flags)
++        ids = getattr(self.collider, "collider_particle_ids", None)
++        if ids is not None and ids.size:
++            wp.launch(_exclude_collider_particles, dim=ids.size, inputs=[ids, self.particle_flags], device=model.device)
++        material = self.material_parameters
++        wp.launch(
++            _refresh_particle_properties,
++            dim=model.particle_count,
++            inputs=[
++                self.particle_radius,
++                model.particle_mass,
++                self.particle_flags,
++                self.particle_volume,
++                self.particle_density,
++                self.material_particle_flags,
++                self.material_particle_volume,
++                material.young_modulus,
++                material.hardening,
++                material.viscosity,
++                material.dilatancy,
++                self._particle_property_extrema,
++            ],
++            device=model.device,
++        )
++        young, hardening, viscosity, dilatancy = self._particle_property_extrema.numpy()
++        self.min_young_modulus = float(young)
++        self.max_hardening = 0.0 if hardening == -math.inf else float(hardening)
++        self.has_viscosity = bool(viscosity)
++        self.has_dilatancy = bool(dilatancy)
++
+     def _refresh_particle_flags_and_extrema(self):
+         """Refresh transfer/material particle masks and material extrema."""
+         model = self.model
+diff --git a/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py b/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py
+index 6b0afbc0..ffbbe648 100644
+--- a/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py
++++ b/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py
+@@ -1928,6 +1928,26 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
+             self._step_impl(state_in, state_out, dt, pic, scratch)
+             scratch.release_temporaries()
+ 
++    def notify_particle_properties_changed(self) -> None:
++        """Refresh particle masses, radii, and flags after in-place model edits.
++
++        .. experimental::
++            This targeted particle-property update may change without prior notice.
++
++        Use this after editing existing ``model.particle_mass``,
++        ``model.particle_inv_mass``, ``model.particle_radius``, or
++        ``model.particle_flags`` arrays. It refreshes derived volumes, densities,
++        transfer/material masks, and material extrema without reading full
++        particle arrays back to the CPU or replacing derived device arrays.
++        Four scalar extrema are read back; this call cannot run inside CUDA
++        graph capture. Particle count, material arrays, and collider membership
++        must remain unchanged. For material edits, use :meth:`notify_model_changed`.
++
++        Particle physical history is preserved. If the edits invalidate numerical
++        warm starts, the caller should also call :meth:`reset` with ``flags=0``.
++        """
++        self._mpm_model.notify_particle_properties_changed()
++
+     @override
+     def notify_model_changed(self, flags: ModelFlags | int) -> None:
+         if flags & ModelFlags.MODEL_PROPERTIES:

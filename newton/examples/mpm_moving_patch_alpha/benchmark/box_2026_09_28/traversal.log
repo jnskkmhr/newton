@@ -1,0 +1,4 @@
+START traversal_box_moving-patch_6 repeat=0
+DONE traversal_box_moving-patch_6 repeat=0: ok 35.34560061050191
+START traversal_box_moving-patch_6 repeat=1
+DONE traversal_box_moving-patch_6 repeat=1: ok 35.394502797765504

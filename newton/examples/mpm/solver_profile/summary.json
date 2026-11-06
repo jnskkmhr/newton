@@ -1,0 +1,1802 @@
+{
+  "bed": {
+    "mean_ms": 23.28055796388071,
+    "std_ms": 0.6078157528639393,
+    "steps": 360,
+    "repeat_mean_ms": [
+      23.159779941973586,
+      23.371225712859694,
+      23.31066823680885
+    ],
+    "diagnostic_mean_ms": 23.402541724822694,
+    "stages_stream_ms": {
+      "Grid construction": 1.8123130669196446,
+      "Function spaces": 0.8538811592592133,
+      "Collision rasterization": 4.534643363497647,
+      "Particle-to-grid": 0.15827404393090144,
+      "Material assembly": 0.9652901348140505,
+      "Solve preparation + iterations": 12.634235294659932,
+      "Warm start": 0.17133297732927733,
+      "Particle update": 0.10940106761538321,
+      "Other": 0.17334471376994368
+    },
+    "iteration_graph_gpu_ms": 8.773934152391222,
+    "solver_loop_cpu_submission_ms": 0.5872767666666668,
+    "memory": {
+      "processes": [
+        {
+          "pid": 220725,
+          "mib": 2584
+        }
+      ],
+      "cuda_pool_used_bytes": 1813521760,
+      "cuda_pool_lifetime_high_bytes": 2781505943,
+      "groups_bytes": {
+        "Model": 29280497,
+        "Particle and body state": 22080000,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 729829836,
+        "Warm start": 34603008,
+        "Fields and matrices": 365428796,
+        "Other solver buffers": 480008
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 384688960
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 256459584
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 32058176
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 18874368
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 10485764
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_distance_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_friction",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_adhesion",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_node_volume",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_ids",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "grid._edge_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 6291456
+        },
+        {
+          "path": "model.mpm.particle_qd_grad",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_elastic_strain",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_stress",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_transform",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_qd_grad",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_elastic_strain",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_stress",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_transform",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 4194308
+        },
+        {
+          "path": "grid._node_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 131072,
+      "velocity_node_buffer_capacity": 1048576,
+      "volume_voxel_count": 131072,
+      "active_voxel_count": 63153
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals 2.795623458951013e-06, 0.00018844027063344567\nGauss-Seidel terminated after 101 iterations with residuals 2.8582699087564833e-06, 0.0001965030177992131\nGauss-Seidel terminated after 101 iterations with residuals 3.173312506987713e-05, 0.011443878171834272\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 2.795623458951013e-06, 0.00018844027063344567\nGauss-Seidel terminated after 101 iterations with residuals 2.8582699087564833e-06, 0.0001965030177992131\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.011443878171834272\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 2.795623458951013e-06, 0.00018844027063344567\nGauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals 0.004075103905051947, 0.02835430169177027\n"
+    ]
+  },
+  "box": {
+    "mean_ms": 23.32188051724289,
+    "std_ms": 0.5852729000695486,
+    "steps": 360,
+    "repeat_mean_ms": [
+      23.319362908174906,
+      23.2744820813726,
+      23.371796562181164
+    ],
+    "diagnostic_mean_ms": 23.42419513313669,
+    "stages_stream_ms": {
+      "Grid construction": 1.8095236430565516,
+      "Function spaces": 0.859841956363784,
+      "Collision rasterization": 4.531766215042121,
+      "Particle-to-grid": 0.1679361778828833,
+      "Material assembly": 0.9751307541297541,
+      "Solve preparation + iterations": 12.614555933740403,
+      "Warm start": 0.17208897708397772,
+      "Particle update": 0.10847680057502455,
+      "Other": 0.17102991783079535
+    },
+    "iteration_graph_gpu_ms": 8.761425760057238,
+    "solver_loop_cpu_submission_ms": 0.5783480333333334,
+    "memory": {
+      "processes": [
+        {
+          "pid": 222121,
+          "mib": 2488
+        }
+      ],
+      "cuda_pool_used_bytes": 1813525126,
+      "cuda_pool_lifetime_high_bytes": 2781509309,
+      "groups_bytes": {
+        "Model": 29281575,
+        "Particle and body state": 22080128,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 729829836,
+        "Warm start": 34603036,
+        "Fields and matrices": 365428796,
+        "Other solver buffers": 480008
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 384688960
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 256459584
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 32058176
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 18874368
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 10485764
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_distance_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_friction",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_adhesion",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_node_volume",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_ids",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "grid._edge_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 6291456
+        },
+        {
+          "path": "model.mpm.particle_qd_grad",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_elastic_strain",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_stress",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_transform",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_qd_grad",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_elastic_strain",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_stress",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_transform",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 4194308
+        },
+        {
+          "path": "grid._node_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 131072,
+      "velocity_node_buffer_capacity": 1048576,
+      "volume_voxel_count": 131072,
+      "active_voxel_count": 63074
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 1.0545000804995652e-05, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0438437852021577\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals 1.2857919500675052e-05, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.1386530786694493e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals 1.2857919500675052e-05, 0.0006453542399594531\n"
+    ]
+  },
+  "box_capacity_075": {
+    "mean_ms": 19.856574262505294,
+    "std_ms": 0.9345314157994112,
+    "steps": 360,
+    "repeat_mean_ms": [
+      19.750949295121245,
+      20.093848209944554,
+      19.724925282450084
+    ],
+    "diagnostic_mean_ms": 19.805695804017077,
+    "stages_stream_ms": {
+      "Grid construction": 1.570565863781505,
+      "Function spaces": 0.8262471116251416,
+      "Collision rasterization": 3.633696179513936,
+      "Particle-to-grid": 0.1632359988573525,
+      "Material assembly": 0.933075289014313,
+      "Solve preparation + iterations": 10.66844875017802,
+      "Warm start": 0.14997022235766053,
+      "Particle update": 0.11176106724888087,
+      "Other": 0.28431893007849185
+    },
+    "iteration_graph_gpu_ms": 7.651687145233154,
+    "solver_loop_cpu_submission_ms": 0.6016018333333334,
+    "memory": {
+      "processes": [
+        {
+          "pid": 244673,
+          "mib": 2200
+        }
+      ],
+      "cuda_pool_used_bytes": 1487342214,
+      "cuda_pool_lifetime_high_bytes": 2214532797,
+      "groups_bytes": {
+        "Model": 29281575,
+        "Particle and body state": 22080128,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 649613772,
+        "Warm start": 25952284,
+        "Fields and matrices": 274071612,
+        "Other solver buffers": 480008
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 346940224
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 231293760
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 28912448
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 23592960
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 23592960
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 23592960
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 23592960
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 23592960
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 23592960
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 15728640
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 14155776
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 9437184
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 9437184
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 9437184
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 9437184
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 7864324
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_distance_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_friction",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_adhesion",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_node_volume",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.collider_ids",
+          "group": "Fields and matrices",
+          "bytes": 7864320
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 6291456
+        },
+        {
+          "path": "grid._edge_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 4718592
+        },
+        {
+          "path": "model.mpm.particle_qd_grad",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_elastic_strain",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_stress",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_transform",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_qd_grad",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_elastic_strain",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_stress",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_transform",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 3145732
+        },
+        {
+          "path": "grid._node_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 3145728
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 3145728
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 3145728
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 3145728
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 98304,
+      "velocity_node_buffer_capacity": 786432,
+      "volume_voxel_count": 98304,
+      "active_voxel_count": 63074
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.3148016478226054e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 0.004283893387764692, 0.044629860853173636\nGauss-Seidel terminated after 101 iterations with residuals 0.0042703221552073956, 0.0438437852021577\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.3148016478226054e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.3148016478226054e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 0.004283893387764692, 0.044629860853173636\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0006453542399594531\n"
+    ]
+  },
+  "box_capacity_2x": {
+    "mean_ms": 41.12185932754073,
+    "std_ms": 0.5442749979284928,
+    "steps": 360,
+    "repeat_mean_ms": [
+      41.106004049652256,
+      41.14419787268465,
+      41.11537606028529
+    ],
+    "diagnostic_mean_ms": 41.20543771326387,
+    "stages_stream_ms": {
+      "Grid construction": 2.8283928871154784,
+      "Function spaces": 1.1658065772718853,
+      "Collision rasterization": 8.319652183620038,
+      "Particle-to-grid": 0.1861599108825127,
+      "Material assembly": 1.0916642644339138,
+      "Solve preparation + iterations": 22.794165309270223,
+      "Warm start": 0.2512198215557469,
+      "Particle update": 0.11120666799445948,
+      "Other": 0.20019207727455068
+    },
+    "iteration_graph_gpu_ms": 15.72407129075792,
+    "solver_loop_cpu_submission_ms": 0.5867618333333334,
+    "memory": {
+      "processes": [
+        {
+          "pid": 224794,
+          "mib": 4024
+        }
+      ],
+      "cuda_pool_used_bytes": 3118257798,
+      "cuda_pool_lifetime_high_bytes": 5049417405,
+      "groups_bytes": {
+        "Model": 29281575,
+        "Particle and body state": 22080128,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 1050694092,
+        "Warm start": 69206044,
+        "Fields and matrices": 730857532,
+        "Other solver buffers": 480008
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 535683904
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 357122880
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 62914560
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 62914560
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 62914560
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 62914560
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 62914560
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 62914560
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 44641088
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 37748736
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 25165824
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 25165824
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 25165824
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 25165824
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 20971524
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_distance_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_friction",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_adhesion",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_node_volume",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.collider_ids",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "grid._edge_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 8388612
+        },
+        {
+          "path": "grid._node_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 8388608
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "scratch.fraction_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "scratch.inv_mass_matrix",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "last_step.ws_stress_field._dof_values",
+          "group": "Warm start",
+          "bytes": 6291456
+        },
+        {
+          "path": "scratch.plastic_strain_delta_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 6291456
+        },
+        {
+          "path": "scratch.elastic_strain_delta_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 6291456
+        },
+        {
+          "path": "scratch.strain_yield_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 6291456
+        },
+        {
+          "path": "scratch.stress_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 6291456
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 262144,
+      "velocity_node_buffer_capacity": 2097152,
+      "volume_voxel_count": 262144,
+      "active_voxel_count": 63074
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 7.456455932697281e-06, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 8.05150830274215e-06, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 8.05150830274215e-06, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 424528.125, 735304.0633207463\nGauss-Seidel terminated after 101 iterations with residuals 9.09193931875052e-06, 0.0006453542399594531\n"
+    ]
+  },
+  "box_capacity_4x": {
+    "mean_ms": 72.93659091163944,
+    "std_ms": 0.8018341365628096,
+    "steps": 360,
+    "repeat_mean_ms": [
+      72.87105468664474,
+      72.9216710072554,
+      73.01704704101819
+    ],
+    "diagnostic_mean_ms": 72.94253975398735,
+    "stages_stream_ms": {
+      "Grid construction": 4.903569327460395,
+      "Function spaces": 2.1921103086736466,
+      "Collision rasterization": 16.09104452724375,
+      "Particle-to-grid": 0.25311733298003675,
+      "Material assembly": 1.4053271124760311,
+      "Solve preparation + iterations": 38.194345484839545,
+      "Warm start": 0.455657511908147,
+      "Particle update": 0.108094311836693,
+      "Other": 0.2890407706785481
+    },
+    "iteration_graph_gpu_ms": 24.39840359157986,
+    "solver_loop_cpu_submission_ms": 0.6320253,
+    "memory": {
+      "processes": [
+        {
+          "pid": 226779,
+          "mib": 6648
+        }
+      ],
+      "cuda_pool_used_bytes": 5727723142,
+      "cuda_pool_lifetime_high_bytes": 9585233597,
+      "groups_bytes": {
+        "Model": 29281575,
+        "Particle and body state": 22080128,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 1692422604,
+        "Warm start": 138412060,
+        "Fields and matrices": 1461715004,
+        "Other solver buffers": 480008
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 837673792
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 558449472
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 125829120
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 125829120
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 125829120
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 125829120
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 125829120
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 125829120
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 83886080
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 75497472
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 69806912
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 50331648
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 50331648
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 50331648
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 50331648
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 41943044
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_distance_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_friction",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_adhesion",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_node_volume",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.collider_ids",
+          "group": "Fields and matrices",
+          "bytes": 41943040
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 33554432
+        },
+        {
+          "path": "grid._edge_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 25165824
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 16777220
+        },
+        {
+          "path": "grid._node_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 16777216
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "scratch.fraction_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "scratch.inv_mass_matrix",
+          "group": "Fields and matrices",
+          "bytes": 16777216
+        },
+        {
+          "path": "last_step.ws_stress_field._dof_values",
+          "group": "Warm start",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.plastic_strain_delta_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.elastic_strain_delta_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.strain_yield_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.stress_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 524288,
+      "velocity_node_buffer_capacity": 4194304,
+      "volume_voxel_count": 524288,
+      "active_voxel_count": 63074
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals 6.428977940231562e-06, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals 5.272515409160405e-06, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals nan, inf\n"
+    ]
+  },
+  "box_temporary_store": {
+    "mean_ms": 22.863736634220306,
+    "std_ms": 1.935739058143756,
+    "steps": 360,
+    "repeat_mean_ms": [
+      22.587267312337644,
+      22.461973197641782,
+      23.541969392681494
+    ],
+    "diagnostic_mean_ms": 22.527695150670805,
+    "stages_stream_ms": {
+      "Grid construction": 1.8125969777504605,
+      "Function spaces": 0.8487224901715914,
+      "Collision rasterization": 4.409271023026021,
+      "Particle-to-grid": 0.16376053322520523,
+      "Material assembly": 0.9685152896990378,
+      "Solve preparation + iterations": 12.597004159291586,
+      "Warm start": 0.17194551037003594,
+      "Particle update": 0.10720586683601141,
+      "Other": 0.13646742588025518
+    },
+    "iteration_graph_gpu_ms": 8.9610382715861,
+    "solver_loop_cpu_submission_ms": 0.5764135,
+    "memory": {
+      "processes": [
+        {
+          "pid": 229946,
+          "mib": 3512
+        }
+      ],
+      "cuda_pool_used_bytes": 2914202618,
+      "cuda_pool_lifetime_high_bytes": 3512393725,
+      "groups_bytes": {
+        "Model": 29281575,
+        "Particle and body state": 22080128,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 729829836,
+        "Warm start": 34603036,
+        "Fields and matrices": 482256464,
+        "Other solver buffers": 480008,
+        "Unused FEM pool storage": 1140250492
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 384688960
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 256459584
+        },
+        {
+          "path": "scratch.sym_strain_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 83886080
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 83886080
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 83886080
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 83886080
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 83886080
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 83886080
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 83886080
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 32058176
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 31457280
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 31457280
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 20971520
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 18874368
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 17280000
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 13107200
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 12582912
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 12582912
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 12582912
+        },
+        {
+          "path": "temporary_store",
+          "group": "Unused FEM pool storage",
+          "bytes": 12582912
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 131072,
+      "velocity_node_buffer_capacity": 1048576,
+      "volume_voxel_count": 131072,
+      "active_voxel_count": 63074
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.1395377441658638e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 1.0554552318353672e-05, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals 1.2865755707025528e-05, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.1395377441658638e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 1.0554552318353672e-05, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals 1.2865755707025528e-05, 0.0006453542399594531\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.1395377441658638e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals 1.0554552318353672e-05, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals 1.2865755707025528e-05, 0.0006453542399594531\n"
+    ]
+  },
+  "colliders": {
+    "mean_ms": 23.6552740476327,
+    "std_ms": 0.6353023329765247,
+    "steps": 360,
+    "repeat_mean_ms": [
+      23.45856571822272,
+      23.38287409802433,
+      24.124382326651055
+    ],
+    "diagnostic_mean_ms": 23.529723064469483,
+    "stages_stream_ms": {
+      "Grid construction": 1.8091160857015185,
+      "Function spaces": 0.8621327113774088,
+      "Collision rasterization": 4.533254586999344,
+      "Particle-to-grid": 0.16173715541760125,
+      "Material assembly": 0.9702311109337541,
+      "Solve preparation + iterations": 12.743323217497933,
+      "Warm start": 0.17106977713604768,
+      "Particle update": 0.10782880052510235,
+      "Other": 0.15751604020705498
+    },
+    "iteration_graph_gpu_ms": 8.827687051561144,
+    "solver_loop_cpu_submission_ms": 0.5849850333333334,
+    "memory": {
+      "processes": [
+        {
+          "pid": 223437,
+          "mib": 2584
+        }
+      ],
+      "cuda_pool_used_bytes": 1813576456,
+      "cuda_pool_lifetime_high_bytes": 2781560639,
+      "groups_bytes": {
+        "Model": 29298585,
+        "Particle and body state": 22082048,
+        "MPM material and colliders": 2400000,
+        "Grid topology": 729829836,
+        "Warm start": 34603456,
+        "Fields and matrices": 365428796,
+        "Other solver buffers": 480008
+      },
+      "largest_buffers": [
+        {
+          "path": "grid._edge_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 384688960
+        },
+        {
+          "path": "grid._node_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 256459584
+        },
+        {
+          "path": "grid._cell_grid.buffer",
+          "group": "Grid topology",
+          "bytes": 32058176
+        },
+        {
+          "path": "last_step.ws_impulse_field._dof_values",
+          "group": "Warm start",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_normal_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.impulse_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_position_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 31457280
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 20971520
+        },
+        {
+          "path": "grid._edge_candidates",
+          "group": "Grid topology",
+          "bytes": 18874368
+        },
+        {
+          "path": "grid._node_ijk",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "grid._node_candidates",
+          "group": "Grid topology",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.elastic_parameters_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.velocity_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 12582912
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 10485764
+        },
+        {
+          "path": "scratch.collider_fraction_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_distance_field._dof_values",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_friction",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_adhesion",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_node_volume",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.collider_ids",
+          "group": "Fields and matrices",
+          "bytes": 10485760
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._space_to_partition",
+          "group": "Fields and matrices",
+          "bytes": 8388608
+        },
+        {
+          "path": "grid._edge_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 6291456
+        },
+        {
+          "path": "model.mpm.particle_qd_grad",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_elastic_strain",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_stress",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "model.mpm.particle_transform",
+          "group": "Model",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_qd_grad",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_elastic_strain",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_stress",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "state.mpm.particle_transform",
+          "group": "Particle and body state",
+          "bytes": 4320000
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+          "group": "Fields and matrices",
+          "bytes": 4194308
+        },
+        {
+          "path": "grid._node_candidate_mask",
+          "group": "Grid topology",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test._space_partition._node_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        },
+        {
+          "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+          "group": "Fields and matrices",
+          "bytes": 4194304
+        }
+      ]
+    },
+    "grid": {
+      "cell_buffer_capacity": 131072,
+      "velocity_node_buffer_capacity": 1048576,
+      "volume_voxel_count": 131072,
+      "active_voxel_count": 62200
+    },
+    "particle_count": 120000,
+    "convergence_diagnostics": [
+      "Gauss-Seidel terminated after 101 iterations with residuals nan, 0.0007699786610638001\nGauss-Seidel terminated after 101 iterations with residuals nan, inf\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0011466334503087944\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.637841523915995e-05, 0.0007699786610638001\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0021568872746394554\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0011466334503087944\n",
+      "Gauss-Seidel terminated after 101 iterations with residuals 1.637841523915995e-05, 0.0007699786610638001\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0021568872746394554\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0011466334503087944\n"
+    ]
+  }
+}

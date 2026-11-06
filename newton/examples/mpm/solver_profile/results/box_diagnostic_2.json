@@ -1,0 +1,2164 @@
+{
+  "config": {
+    "scene": "box",
+    "size": 2.0,
+    "voxel_size": 0.025,
+    "grid": "sparse",
+    "capacity": 131072,
+    "warmup": 120,
+    "steps": 120,
+    "diagnostic": true,
+    "temporary_store": false,
+    "save_state": false,
+    "output": "newton/examples/mpm/solver_profile/results/box_diagnostic_2.json"
+  },
+  "particle_count": 120000,
+  "grid": {
+    "cell_buffer_capacity": 131072,
+    "velocity_node_buffer_capacity": 1048576,
+    "volume_voxel_count": 131072,
+    "active_voxel_count": 63074
+  },
+  "initialization_seconds": 0.5366397530306131,
+  "warmup_seconds": 2.8761603420134634,
+  "wall_ms": {
+    "mean": 23.512678493473988,
+    "std": 0.5977015923875746,
+    "count": 120
+  },
+  "stream_ms": {
+    "mean": 21.52389470736186,
+    "std": 0.582333081667994,
+    "count": 120
+  },
+  "wall_samples_ms": [
+    23.691752925515175,
+    22.584317019209266,
+    23.169917054474354,
+    24.03992193285376,
+    23.438298027031124,
+    22.97517703846097,
+    23.52298202458769,
+    24.32911191135645,
+    22.888790001161397,
+    23.914964986033738,
+    23.64951092749834,
+    23.732844972983003,
+    22.76464004535228,
+    23.414661991409957,
+    23.783233016729355,
+    22.80323999002576,
+    23.357783094979823,
+    24.185979971662164,
+    23.102989071048796,
+    23.042961955070496,
+    23.59432098455727,
+    22.995043895207345,
+    23.14877789467573,
+    23.29160599038005,
+    23.373725940473378,
+    23.43576995190233,
+    23.692490067332983,
+    25.280594010837376,
+    23.69810303207487,
+    23.178413044661283,
+    23.646180983632803,
+    23.52844807319343,
+    22.586767096072435,
+    23.429302033036947,
+    24.22312507405877,
+    23.38105591479689,
+    23.362675914540887,
+    23.83402397390455,
+    23.37678207550198,
+    22.551339003257453,
+    23.507480043917894,
+    23.929198971018195,
+    22.935279994271696,
+    23.693087976425886,
+    23.77155690919608,
+    23.14116107299924,
+    23.067816044203937,
+    24.10326700191945,
+    23.910422110930085,
+    23.08415505103767,
+    23.918512975797057,
+    23.88168592005968,
+    22.971690981648862,
+    23.649814072996378,
+    24.062665994279087,
+    23.344532935880125,
+    23.246995988301933,
+    23.42419500928372,
+    23.839334957301617,
+    22.86799089051783,
+    23.113038972951472,
+    23.94804498180747,
+    23.23176001664251,
+    23.19973800331354,
+    23.88978097587824,
+    23.55937205720693,
+    23.014147067442536,
+    24.912672000937164,
+    23.84118002373725,
+    23.70223798789084,
+    25.125369080342352,
+    23.929806891828775,
+    23.794076056219637,
+    22.764435037970543,
+    23.728020954877138,
+    23.545974981971085,
+    23.6629000864923,
+    23.19934591650963,
+    23.70514499489218,
+    23.87194603215903,
+    23.162337951362133,
+    23.27661495655775,
+    23.5783209791407,
+    23.20010110270232,
+    22.901016054674983,
+    23.781648953445256,
+    23.56165903620422,
+    22.62455807067454,
+    24.022737983614206,
+    24.300366989336908,
+    22.733438992872834,
+    23.454308975487947,
+    23.525567026808858,
+    23.900183965452015,
+    22.869838983751833,
+    23.46004405990243,
+    23.810497019439936,
+    22.97614491544664,
+    23.76182610169053,
+    23.82735093124211,
+    22.930776001885533,
+    22.540231002494693,
+    24.224822991527617,
+    23.87899800669402,
+    22.592314053326845,
+    23.657892015762627,
+    23.724180995486677,
+    22.677397006191313,
+    23.571772035211325,
+    23.719865013845265,
+    23.277573054656386,
+    22.674186038784683,
+    26.83247998356819,
+    24.397494038566947,
+    22.96324004419148,
+    22.991224890574813,
+    23.66307599004358,
+    23.211561958305538,
+    22.942934068851173,
+    24.229377042502165
+  ],
+  "stages": {
+    "step": {
+      "cpu_ms": {
+        "mean": 21.47235365797921,
+        "std": 0.5571288536710086,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 21.49764928817749,
+        "std": 0.5791072768844638,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 14.207183417359678,
+        "std": 0.5241775106443873,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.18364791418231713,
+        "std": 0.11127794494729082,
+        "count": 120
+      }
+    },
+    "_particles_to_cells": {
+      "cpu_ms": {
+        "mean": 1.0059517827661086,
+        "std": 0.0674326669505835,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 1.8123728017012277,
+        "std": 0.020310290975206226,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.5578625452471897,
+        "std": 0.04368536046482888,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 1.7007744028912082,
+        "std": 0.01771523503031023,
+        "count": 120
+      }
+    },
+    "_update_grid_point_mask": {
+      "cpu_ms": {
+        "mean": 0.01577822646747033,
+        "std": 0.001593488901962373,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.015253333337993051,
+        "std": 0.005767305502800129,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.01577822646747033,
+        "std": 0.001593488901962373,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.015253333337993051,
+        "std": 0.005767305502800129,
+        "count": 120
+      }
+    },
+    "Build active partition": {
+      "cpu_ms": {
+        "mean": 0.15671238070353866,
+        "std": 0.014485709680036719,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.019733333277205625,
+        "std": 0.0011079759678513205,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.009580498832898835,
+        "std": 0.00035456566946184055,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.001261066629861792,
+        "std": 0.0004763504549393867,
+        "count": 120
+      }
+    },
+    "_create_geometry_partition": {
+      "cpu_ms": {
+        "mean": 0.14713188187063983,
+        "std": 0.014286935024813568,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.018472266647343836,
+        "std": 0.0010253115061580804,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.14713188187063983,
+        "std": 0.014286935024813568,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.018472266647343836,
+        "std": 0.0010253115061580804,
+        "count": 120
+      }
+    },
+    "Bin particles": {
+      "cpu_ms": {
+        "mean": 0.27559863034791005,
+        "std": 0.016234993447300995,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.07661173219482104,
+        "std": 0.0008589504060407511,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.27559863034791005,
+        "std": 0.016234993447300995,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.07661173219482104,
+        "std": 0.0008589504060407511,
+        "count": 120
+      }
+    },
+    "_rebuild_scratchpad": {
+      "cpu_ms": {
+        "mean": 1.4535068495509524,
+        "std": 0.07492619493073573,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.8512794678409894,
+        "std": 0.140695850948826,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.008068366635901233,
+        "std": 0.0004572957047356095,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0012437358498573303,
+        "std": 0.0005759840066695423,
+        "count": 120
+      }
+    },
+    "Scratchpad": {
+      "cpu_ms": {
+        "mean": 1.4454384829150513,
+        "std": 0.0747220216367545,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.8500357319911321,
+        "std": 0.14060822014810528,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 1.312349335057661,
+        "std": 0.06312704077834108,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.7800759985422094,
+        "std": 0.1303278260073561,
+        "count": 120
+      }
+    },
+    "_compute_coloring": {
+      "cpu_ms": {
+        "mean": 0.13308914785739034,
+        "std": 0.013402252758614144,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.06995973344892263,
+        "std": 0.03400161099295916,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.13308914785739034,
+        "std": 0.013402252758614144,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.06995973344892263,
+        "std": 0.03400161099295916,
+        "count": 120
+      }
+    },
+    "_rasterize_colliders": {
+      "cpu_ms": {
+        "mean": 0.9627250294821957,
+        "std": 0.04041666672300993,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 4.55814133087794,
+        "std": 0.1829167188510011,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.011972013938551148,
+        "std": 0.0007367647322211794,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.005256525675455729,
+        "std": 0.0031786522264860193,
+        "count": 120
+      }
+    },
+    "Rasterize collider": {
+      "cpu_ms": {
+        "mean": 0.9507530155436447,
+        "std": 0.04008765043426134,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 4.552884805202484,
+        "std": 0.18293650839719292,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.9507530155436447,
+        "std": 0.04008765043426134,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 4.552884805202484,
+        "std": 0.18293650839719292,
+        "count": 120
+      }
+    },
+    "_compute_unconstrained_velocity": {
+      "cpu_ms": {
+        "mean": 0.41028477523165446,
+        "std": 0.029280475863526105,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.16846426663299402,
+        "std": 0.0035912571600398287,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.014335347805172205,
+        "std": 0.0006485458834007581,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0012674671908219656,
+        "std": 0.0004674866067489152,
+        "count": 120
+      }
+    },
+    "Unconstrained velocity": {
+      "cpu_ms": {
+        "mean": 0.39594942742648226,
+        "std": 0.028920155041463686,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.16719679944217206,
+        "std": 0.003597423395258692,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.39594942742648226,
+        "std": 0.028920155041463686,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.16719679944217206,
+        "std": 0.003597423395258692,
+        "count": 120
+      }
+    },
+    "_build_collider_rigidity_operator": {
+      "cpu_ms": {
+        "mean": 0.0012643412143612902,
+        "std": 0.00015531324012186594,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.00043306667163657645,
+        "std": 0.0002539226789815371,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.0012643412143612902,
+        "std": 0.00015531324012186594,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.00043306667163657645,
+        "std": 0.0002539226789815371,
+        "count": 120
+      }
+    },
+    "_build_elasticity_system": {
+      "cpu_ms": {
+        "mean": 0.7138813574177524,
+        "std": 0.028820930390906177,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.7221799969673157,
+        "std": 0.07158475742830342,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.014270050451159477,
+        "std": 0.0008650086809255675,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0013426656524340311,
+        "std": 0.0004074084017064142,
+        "count": 120
+      }
+    },
+    "Elasticity": {
+      "cpu_ms": {
+        "mean": 0.6996113069665929,
+        "std": 0.028532604386065273,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.7208373313148816,
+        "std": 0.0715072206026237,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.6996113069665929,
+        "std": 0.028532604386065273,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.7208373313148816,
+        "std": 0.0715072206026237,
+        "count": 120
+      }
+    },
+    "_build_plasticity_system": {
+      "cpu_ms": {
+        "mean": 0.5444749200250953,
+        "std": 0.08613842218344933,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.26228693363567196,
+        "std": 0.045734272772282876,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.027846185063632827,
+        "std": 0.0268973341668125,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0041525325737893585,
+        "std": 0.0006384753584069042,
+        "count": 120
+      }
+    },
+    "Interpolated yield parameters": {
+      "cpu_ms": {
+        "mean": 0.2428387088002637,
+        "std": 0.05591759416832843,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.03990373297904928,
+        "std": 0.0008448796495818155,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.2428387088002637,
+        "std": 0.05591759416832843,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.03990373297904928,
+        "std": 0.0008448796495818155,
+        "count": 120
+      }
+    },
+    "Strain matrix": {
+      "cpu_ms": {
+        "mean": 0.2737900261611988,
+        "std": 0.010181678101135124,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.21823066808283328,
+        "std": 0.045777575899945355,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.2737900261611988,
+        "std": 0.010181678101135124,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.21823066808283328,
+        "std": 0.045777575899945355,
+        "count": 120
+      }
+    },
+    "_load_warmstart": {
+      "cpu_ms": {
+        "mean": 0.133335324547564,
+        "std": 0.053882294492172224,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.04927199995145202,
+        "std": 0.0011449805531820929,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.009601282848355671,
+        "std": 0.0006042822323141975,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0007831995065013567,
+        "std": 0.00010169440591052746,
+        "count": 120
+      }
+    },
+    "Warmstart fields": {
+      "cpu_ms": {
+        "mean": 0.12373404169920832,
+        "std": 0.053835606150042375,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.04848880044495066,
+        "std": 0.0011482157844527145,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.12373404169920832,
+        "std": 0.053835606150042375,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.04848880044495066,
+        "std": 0.0011482157844527145,
+        "count": 120
+      }
+    },
+    "_solve_rheology": {
+      "cpu_ms": {
+        "mean": 1.4970761073830847,
+        "std": 0.0921918800658842,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 12.655092843373616,
+        "std": 0.48954825991988704,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.7033837066652874,
+        "std": 0.02650638555054871,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.2630272626876831,
+        "std": 0.04015358940862121,
+        "count": 120
+      }
+    },
+    "Strain solve": {
+      "cpu_ms": {
+        "mean": 0.7936924007177973,
+        "std": 0.07189325478052781,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 12.392065580685934,
+        "std": 0.4853099139195175,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.7936924007177973,
+        "std": 0.07189325478052781,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 12.392065580685934,
+        "std": 0.4853099139195175,
+        "count": 120
+      }
+    },
+    "_save_for_next_warmstart": {
+      "cpu_ms": {
+        "mean": 0.3048564161872491,
+        "std": 0.021024216130661525,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.12254453257968029,
+        "std": 0.002151422532337263,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.010490829784733554,
+        "std": 0.0003707871553321934,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0012031992897391318,
+        "std": 0.00048390258440373886,
+        "count": 120
+      }
+    },
+    "Save warmstart fields": {
+      "cpu_ms": {
+        "mean": 0.2943655864025156,
+        "std": 0.020801622325460782,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.12134133328994115,
+        "std": 0.002225613634911204,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.2943655864025156,
+        "std": 0.020801622325460782,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.12134133328994115,
+        "std": 0.002225613634911204,
+        "count": 120
+      }
+    },
+    "_update_particles": {
+      "cpu_ms": {
+        "mean": 0.2040955985042577,
+        "std": 0.011515618543607957,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.10848720042655866,
+        "std": 0.0017452157551353317,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.020585192639070254,
+        "std": 0.0009382144954641387,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0010706652576724688,
+        "std": 1.594447967990985e-05,
+        "count": 120
+      }
+    },
+    "Particle strain update": {
+      "cpu_ms": {
+        "mean": 0.12522560524909446,
+        "std": 0.007724844727219453,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.06348080085590482,
+        "std": 0.0012081817353837112,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.12522560524909446,
+        "std": 0.007724844727219453,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.06348080085590482,
+        "std": 0.0012081817353837112,
+        "count": 120
+      }
+    },
+    "Advection": {
+      "cpu_ms": {
+        "mean": 0.05828480061609298,
+        "std": 0.004101669148295474,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.04393573431298137,
+        "std": 0.0011541941866016565,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.05828480061609298,
+        "std": 0.004101669148295474,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.04393573431298137,
+        "std": 0.0011541941866016565,
+        "count": 120
+      }
+    },
+    "_save_data": {
+      "cpu_ms": {
+        "mean": 0.03371773830925425,
+        "std": 0.0032390010688926954,
+        "count": 120
+      },
+      "stream_ms": {
+        "mean": 0.0034469333360902963,
+        "std": 1.8559699767178864e-05,
+        "count": 120
+      },
+      "exclusive_cpu_ms": {
+        "mean": 0.03371773830925425,
+        "std": 0.0032390010688926954,
+        "count": 120
+      },
+      "exclusive_stream_ms": {
+        "mean": 0.0034469333360902963,
+        "std": 1.8559699767178864e-05,
+        "count": 120
+      }
+    }
+  },
+  "memory": {
+    "processes": [
+      {
+        "pid": 222763,
+        "mib": 2488
+      }
+    ],
+    "cuda_pool_used_bytes": 1813525126,
+    "cuda_pool_lifetime_high_bytes": 2781509309,
+    "groups_bytes": {
+      "Model": 29281575,
+      "Particle and body state": 22080128,
+      "MPM material and colliders": 2400000,
+      "Grid topology": 729829836,
+      "Warm start": 34603036,
+      "Fields and matrices": 365428796,
+      "Other solver buffers": 480008
+    },
+    "largest_buffers": [
+      {
+        "path": "grid._edge_grid.buffer",
+        "group": "Grid topology",
+        "bytes": 384688960
+      },
+      {
+        "path": "grid._node_grid.buffer",
+        "group": "Grid topology",
+        "bytes": 256459584
+      },
+      {
+        "path": "grid._cell_grid.buffer",
+        "group": "Grid topology",
+        "bytes": 32058176
+      },
+      {
+        "path": "last_step.ws_impulse_field._dof_values",
+        "group": "Warm start",
+        "bytes": 31457280
+      },
+      {
+        "path": "scratch.collider_normal_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 31457280
+      },
+      {
+        "path": "scratch.collider_velocity",
+        "group": "Fields and matrices",
+        "bytes": 31457280
+      },
+      {
+        "path": "scratch.collider_velocity_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 31457280
+      },
+      {
+        "path": "scratch.impulse_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 31457280
+      },
+      {
+        "path": "scratch.collider_position_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 31457280
+      },
+      {
+        "path": "scratch.collider_fraction_test._space_partition._space_to_partition",
+        "group": "Fields and matrices",
+        "bytes": 20971520
+      },
+      {
+        "path": "grid._edge_candidates",
+        "group": "Grid topology",
+        "bytes": 18874368
+      },
+      {
+        "path": "grid._node_ijk",
+        "group": "Grid topology",
+        "bytes": 12582912
+      },
+      {
+        "path": "grid._node_candidates",
+        "group": "Grid topology",
+        "bytes": 12582912
+      },
+      {
+        "path": "scratch.elastic_parameters_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 12582912
+      },
+      {
+        "path": "scratch.velocity_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 12582912
+      },
+      {
+        "path": "scratch.collider_fraction_test.space_restriction._dof_partition_element_offsets",
+        "group": "Fields and matrices",
+        "bytes": 10485764
+      },
+      {
+        "path": "scratch.collider_fraction_test._space_partition._node_indices",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_fraction_test.space_restriction._dof_partition_indices",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_fraction_test.space_restriction._dof_element_indices",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_fraction_test.space_restriction._dof_indices_in_element",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_distance_field._dof_values",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_friction",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_adhesion",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_node_volume",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.collider_ids",
+        "group": "Fields and matrices",
+        "bytes": 10485760
+      },
+      {
+        "path": "scratch.velocity_test._space_partition._space_to_partition",
+        "group": "Fields and matrices",
+        "bytes": 8388608
+      },
+      {
+        "path": "grid._edge_candidate_mask",
+        "group": "Grid topology",
+        "bytes": 6291456
+      },
+      {
+        "path": "model.mpm.particle_qd_grad",
+        "group": "Model",
+        "bytes": 4320000
+      },
+      {
+        "path": "model.mpm.particle_elastic_strain",
+        "group": "Model",
+        "bytes": 4320000
+      },
+      {
+        "path": "model.mpm.particle_stress",
+        "group": "Model",
+        "bytes": 4320000
+      },
+      {
+        "path": "model.mpm.particle_transform",
+        "group": "Model",
+        "bytes": 4320000
+      },
+      {
+        "path": "state.mpm.particle_qd_grad",
+        "group": "Particle and body state",
+        "bytes": 4320000
+      },
+      {
+        "path": "state.mpm.particle_elastic_strain",
+        "group": "Particle and body state",
+        "bytes": 4320000
+      },
+      {
+        "path": "state.mpm.particle_stress",
+        "group": "Particle and body state",
+        "bytes": 4320000
+      },
+      {
+        "path": "state.mpm.particle_transform",
+        "group": "Particle and body state",
+        "bytes": 4320000
+      },
+      {
+        "path": "scratch.velocity_test.space_restriction._dof_partition_element_offsets",
+        "group": "Fields and matrices",
+        "bytes": 4194308
+      },
+      {
+        "path": "grid._node_candidate_mask",
+        "group": "Grid topology",
+        "bytes": 4194304
+      },
+      {
+        "path": "scratch.velocity_test._space_partition._node_indices",
+        "group": "Fields and matrices",
+        "bytes": 4194304
+      },
+      {
+        "path": "scratch.velocity_test.space_restriction._dof_partition_indices",
+        "group": "Fields and matrices",
+        "bytes": 4194304
+      },
+      {
+        "path": "scratch.velocity_test.space_restriction._dof_element_indices",
+        "group": "Fields and matrices",
+        "bytes": 4194304
+      }
+    ]
+  },
+  "state": {
+    "z_mean": 0.09932848066091537,
+    "max_speed": 0.10092756152153015,
+    "sha256": "e8ccb876bed3d82563ee78befe7b575ceb67f2b2d9daaef03b811e5be3a39f9c"
+  },
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "python": "3.12.14",
+    "warp": "1.17.0"
+  },
+  "cpu_profile_10_steps": [
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm_improve/profile.py",
+      "line": 196,
+      "function": "step",
+      "calls": 10,
+      "self_ms": 0.03379,
+      "inclusive_ms": 236.926431
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm_improve/profiling.py",
+      "line": 61,
+      "function": "wrapped",
+      "calls": 160,
+      "self_ms": 0.240165,
+      "inclusive_ms": 236.45739600000002
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 1900,
+      "function": "step",
+      "calls": 10,
+      "self_ms": 0.048995000000000004,
+      "inclusive_ms": 236.197256
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 6025,
+      "function": "__del__",
+      "calls": 10,
+      "self_ms": 98.653378,
+      "inclusive_ms": 98.67175700000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 2895,
+      "function": "_step_impl",
+      "calls": 10,
+      "self_ms": 0.06698,
+      "inclusive_ms": 94.603036
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 11188,
+      "function": "launch",
+      "calls": 1000,
+      "self_ms": 10.868659000000001,
+      "inclusive_ms": 47.737466000000005
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 1895,
+      "function": "integrate",
+      "calls": 130,
+      "self_ms": 1.046418,
+      "inclusive_ms": 47.30815
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 1404,
+      "function": "_launch_integrate_kernel",
+      "calls": 130,
+      "self_ms": 1.42886,
+      "inclusive_ms": 34.62072800000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3496,
+      "function": "_solve_rheology",
+      "calls": 10,
+      "self_ms": 0.199494,
+      "inclusive_ms": 31.342936
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 2663,
+      "function": "_rebuild_scratchpad",
+      "calls": 10,
+      "self_ms": 0.049098,
+      "inclusive_ms": 27.556316000000002
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 307,
+      "function": "rebuild_function_spaces",
+      "calls": 10,
+      "self_ms": 0.052352,
+      "inclusive_ms": 23.474684000000003
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py",
+      "line": 3315,
+      "function": "__init__",
+      "calls": 3470,
+      "self_ms": 3.6988740000000004,
+      "inclusive_ms": 18.307707
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 11323,
+      "function": "pack_args",
+      "calls": 2000,
+      "self_ms": 2.418232,
+      "inclusive_ms": 16.214114000000002
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3134,
+      "function": "_build_elasticity_system",
+      "calls": 10,
+      "self_ms": 0.098379,
+      "inclusive_ms": 16.161731000000003
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solve_rheology.py",
+      "line": 1889,
+      "function": "solve_rheology",
+      "calls": 10,
+      "self_ms": 0.092132,
+      "inclusive_ms": 16.063124000000002
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/utils.py",
+      "line": 66,
+      "function": "compress_node_indices",
+      "calls": 80,
+      "self_ms": 0.54292,
+      "inclusive_ms": 15.478465
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 2700,
+      "function": "_particles_to_cells",
+      "calls": 10,
+      "self_ms": 0.073769,
+      "inclusive_ms": 15.041132000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 3161,
+      "function": "interpolate",
+      "calls": 60,
+      "self_ms": 0.34578800000000004,
+      "inclusive_ms": 14.490814
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/cache.py",
+      "line": 637,
+      "function": "borrow_temporary",
+      "calls": 1270,
+      "self_ms": 1.5673780000000002,
+      "inclusive_ms": 14.257137000000002
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 10272,
+      "function": "pack_arg",
+      "calls": 6880,
+      "self_ms": 6.508944,
+      "inclusive_ms": 14.147602000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/__init__.py",
+      "line": 42,
+      "function": "make_space_restriction",
+      "calls": 40,
+      "self_ms": 0.044363,
+      "inclusive_ms": 13.836746
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/restriction.py",
+      "line": 28,
+      "function": "__init__",
+      "calls": 40,
+      "self_ms": 0.088011,
+      "inclusive_ms": 13.782487000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/restriction.py",
+      "line": 62,
+      "function": "rebuild",
+      "calls": 40,
+      "self_ms": 0.409953,
+      "inclusive_ms": 13.646369
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3334,
+      "function": "_build_strain_eigenbasis",
+      "calls": 10,
+      "self_ms": 0.094752,
+      "inclusive_ms": 13.620685
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/partition.py",
+      "line": 747,
+      "function": "make_space_partition",
+      "calls": 30,
+      "self_ms": 0.041096,
+      "inclusive_ms": 12.153745
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3221,
+      "function": "_build_plasticity_system",
+      "calls": 10,
+      "self_ms": 0.08088400000000001,
+      "inclusive_ms": 12.123242000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/partition.py",
+      "line": 459,
+      "function": "__init__",
+      "calls": 30,
+      "self_ms": 0.042145,
+      "inclusive_ms": 12.105086000000002
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/partition.py",
+      "line": 485,
+      "function": "rebuild",
+      "calls": 30,
+      "self_ms": 0.034852,
+      "inclusive_ms": 12.020439000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/partition.py",
+      "line": 527,
+      "function": "_compute_node_indices_from_sides",
+      "calls": 30,
+      "self_ms": 0.34490000000000004,
+      "inclusive_ms": 11.978677
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py",
+      "line": 3846,
+      "function": "_init_new",
+      "calls": 1600,
+      "self_ms": 4.360386,
+      "inclusive_ms": 11.504505
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 2863,
+      "function": "_launch_interpolate_kernel",
+      "calls": 60,
+      "self_ms": 0.342573,
+      "inclusive_ms": 9.255944
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py",
+      "line": 1235,
+      "function": "bsr_set_from_triplets",
+      "calls": 40,
+      "self_ms": 0.35723900000000003,
+      "inclusive_ms": 9.190419
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 2959,
+      "function": "_compute_unconstrained_velocity",
+      "calls": 10,
+      "self_ms": 0.076227,
+      "inclusive_ms": 8.696183
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/space/partition.py",
+      "line": 645,
+      "function": "_finalize_node_indices",
+      "calls": 30,
+      "self_ms": 0.194076,
+      "inclusive_ms": 8.628386
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3035,
+      "function": "_rasterize_colliders",
+      "calls": 10,
+      "self_ms": 0.059453,
+      "inclusive_ms": 8.304965000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 360,
+      "function": "_create_velocity_function_space",
+      "calls": 10,
+      "self_ms": 0.023426000000000002,
+      "inclusive_ms": 8.284318
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 389,
+      "function": "_create_collider_function_space",
+      "calls": 10,
+      "self_ms": 0.026572000000000002,
+      "inclusive_ms": 7.708430000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 428,
+      "function": "_create_strain_function_space",
+      "calls": 10,
+      "self_ms": 0.03132000000000001,
+      "inclusive_ms": 7.4090560000000005
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 1180,
+      "function": "add_overload",
+      "calls": 200,
+      "self_ms": 0.18891100000000002,
+      "inclusive_ms": 6.924684
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py",
+      "line": 8373,
+      "function": "get_signature",
+      "calls": 200,
+      "self_ms": 0.46629,
+      "inclusive_ms": 6.656178000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py",
+      "line": 8273,
+      "function": "get_type_code",
+      "calls": 2800,
+      "self_ms": 2.6297900000000003,
+      "inclusive_ms": 6.63729
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3767,
+      "function": "_save_for_next_warmstart",
+      "calls": 10,
+      "self_ms": 0.102107,
+      "inclusive_ms": 5.905482
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/geometry/nanogrid.py",
+      "line": 739,
+      "function": "rebuild",
+      "calls": 10,
+      "self_ms": 0.027386,
+      "inclusive_ms": 5.880854
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/quadrature/pic_quadrature.py",
+      "line": 50,
+      "function": "__init__",
+      "calls": 10,
+      "self_ms": 0.038721000000000005,
+      "inclusive_ms": 5.794136
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solve_rheology.py",
+      "line": 1785,
+      "function": "_run_solver_loop",
+      "calls": 10,
+      "self_ms": 0.07378400000000002,
+      "inclusive_ms": 5.764998
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/quadrature/pic_quadrature.py",
+      "line": 278,
+      "function": "_bin_particles",
+      "calls": 10,
+      "self_ms": 0.053694000000000006,
+      "inclusive_ms": 5.522936
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 1162,
+      "function": "_generate_integrate_kernel",
+      "calls": 130,
+      "self_ms": 0.37568,
+      "inclusive_ms": 5.444591
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/codegen.py",
+      "line": 240,
+      "function": "__setattr__",
+      "calls": 2530,
+      "self_ms": 0.677038,
+      "inclusive_ms": 4.977646000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/cache.py",
+      "line": 341,
+      "function": "get_arg",
+      "calls": 1550,
+      "self_ms": 0.625275,
+      "inclusive_ms": 4.479764
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py",
+      "line": 7571,
+      "function": "rebuild",
+      "calls": 30,
+      "self_ms": 0.023006000000000002,
+      "inclusive_ms": 4.451869
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py",
+      "line": 7683,
+      "function": "_rebuild_voxels",
+      "calls": 30,
+      "self_ms": 3.990304,
+      "inclusive_ms": 4.428863
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py",
+      "line": 2462,
+      "function": "bsr_copy",
+      "calls": 10,
+      "self_ms": 0.037143,
+      "inclusive_ms": 4.426583000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 509,
+      "function": "_notify_operator_usage",
+      "calls": 190,
+      "self_ms": 0.234971,
+      "inclusive_ms": 4.313795000000001
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 13337,
+      "function": "capture_while",
+      "calls": 10,
+      "self_ms": 0.17111400000000002,
+      "inclusive_ms": 4.184897
+    },
+    {
+      "file": "~",
+      "line": 0,
+      "function": "<built-in method builtins.isinstance>",
+      "calls": 67270,
+      "self_ms": 4.150431,
+      "inclusive_ms": 4.160058
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solve_rheology.py",
+      "line": 1689,
+      "function": "__init__",
+      "calls": 10,
+      "self_ms": 0.057252000000000004,
+      "inclusive_ms": 4.132861
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/geometry/nanogrid.py",
+      "line": 814,
+      "function": "rebuild_topology_from_cells",
+      "calls": 10,
+      "self_ms": 0.007496000000000001,
+      "inclusive_ms": 4.132518
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/geometry/nanogrid.py",
+      "line": 1111,
+      "function": "_refresh_rebuildable_topology",
+      "calls": 10,
+      "self_ms": 0.06092600000000001,
+      "inclusive_ms": 4.1250219999999995
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/field/virtual.py",
+      "line": 480,
+      "function": "notify_operator_usage",
+      "calls": 140,
+      "self_ms": 0.660312,
+      "inclusive_ms": 4.003017
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py",
+      "line": 3559,
+      "function": "_update_particles",
+      "calls": 10,
+      "self_ms": 0.079434,
+      "inclusive_ms": 3.8894180000000005
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solve_rheology.py",
+      "line": 1805,
+      "function": "do_iteration_with_condition",
+      "calls": 10,
+      "self_ms": 0.03526000000000001,
+      "inclusive_ms": 3.800514
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/field/__init__.py",
+      "line": 19,
+      "function": "make_restriction",
+      "calls": 20,
+      "self_ms": 0.023169000000000002,
+      "inclusive_ms": 3.784303
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py",
+      "line": 1012,
+      "function": "_bsr_set_from_triplets_native",
+      "calls": 50,
+      "self_ms": 3.183765,
+      "inclusive_ms": 3.634084
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 5043,
+      "function": "allocate",
+      "calls": 1500,
+      "self_ms": 3.1939960000000003,
+      "inclusive_ms": 3.628903
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solve_rheology.py",
+      "line": 682,
+      "function": "__init__",
+      "calls": 10,
+      "self_ms": 0.049371000000000005,
+      "inclusive_ms": 3.6117170000000005
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py",
+      "line": 9837,
+      "function": "empty",
+      "calls": 330,
+      "self_ms": 0.424646,
+      "inclusive_ms": 3.5966580000000006
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/cache.py",
+      "line": 678,
+      "function": "borrow_temporary_like",
+      "calls": 320,
+      "self_ms": 0.15926800000000002,
+      "inclusive_ms": 3.532317
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py",
+      "line": 2265,
+      "function": "bsr_assign",
+      "calls": 10,
+      "self_ms": 0.11452800000000002,
+      "inclusive_ms": 3.36757
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/codegen.py",
+      "line": 465,
+      "function": "set_array_value",
+      "calls": 1440,
+      "self_ms": 1.9710420000000002,
+      "inclusive_ms": 3.342131
+    },
+    {
+      "file": "/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/fem/integrate.py",
+      "line": 1295,
+      "function": "_generate_auxiliary_kernels",
+      "calls": 130,
+      "self_ms": 0.21909900000000002,
+      "inclusive_ms": 3.135524
+    }
+  ],
+  "gpu_activities_3_steps": [
+    {
+      "name": "graph",
+      "flag": 16,
+      "sum_ms": 26.300288200378418,
+      "mean": 8.766762733459473,
+      "std": 0.6005800233489136,
+      "count": 3
+    },
+    {
+      "name": "forward kernel collision_weight_field_35e7d5f7_99d65c02",
+      "flag": 1,
+      "sum_ms": 1.949280023574829,
+      "mean": 0.6497600078582764,
+      "std": 0.001698300082849487,
+      "count": 3
+    },
+    {
+      "name": "forward kernel compliance_form_c0fe2183_a237705d",
+      "flag": 1,
+      "sum_ms": 1.0911680161952972,
+      "mean": 0.36372267206509906,
+      "std": 0.00046027457043460845,
+      "count": 3
+    },
+    {
+      "name": "builtin kernel bsr_fill_triplet_key_values",
+      "flag": 2,
+      "sum_ms": 0.8308799974620342,
+      "mean": 0.05539199983080228,
+      "std": 0.10045634757155103,
+      "count": 15
+    },
+    {
+      "name": "memset",
+      "flag": 8,
+      "sum_ms": 0.7565760005963966,
+      "mean": 0.00573163636815452,
+      "std": 0.013617415928351551,
+      "count": 132
+    },
+    {
+      "name": "builtin kernel bsr_transpose_fill_row_col",
+      "flag": 2,
+      "sum_ms": 0.41283200681209564,
+      "mean": 0.1376106689373652,
+      "std": 0.0017729155134501358,
+      "count": 3
+    },
+    {
+      "name": "builtin kernel bsr_set_column",
+      "flag": 2,
+      "sum_ms": 0.372640002053231,
+      "mean": 0.020702222336290613,
+      "std": 0.016075270106039475,
+      "count": 18
+    },
+    {
+      "name": "builtin kernel memtile_value_kernel",
+      "flag": 2,
+      "sum_ms": 0.3688960049767047,
+      "mean": 0.01756647642746213,
+      "std": 0.03997970792574853,
+      "count": 21
+    },
+    {
+      "name": "builtin kernel (memtile_kernel_by_value<N>)",
+      "flag": 2,
+      "sum_ms": 0.3553280010819435,
+      "mean": 0.1184426670273145,
+      "std": 1.5085059529524157e-05,
+      "count": 3
+    },
+    {
+      "name": "forward kernel rasterize_collider_kernel_dc8fb173",
+      "flag": 1,
+      "sum_ms": 0.2765119969844818,
+      "mean": 0.09217066566149394,
+      "std": 0.0012545018442275118,
+      "count": 3
+    },
+    {
+      "name": "forward kernel integrate_velocity_apic_d7c193e3_3dd0809b",
+      "flag": 1,
+      "sum_ms": 0.24880000203847885,
+      "mean": 0.08293333401282628,
+      "std": 0.0012056637116761714,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _bsr_accumulate_triplet_values_3b93b6b5",
+      "flag": 1,
+      "sum_ms": 0.24223999679088593,
+      "mean": 0.020186666399240494,
+      "std": 0.01552940890757681,
+      "count": 12
+    },
+    {
+      "name": "forward kernel compute_delassus_diagonal_5fc0bd53",
+      "flag": 1,
+      "sum_ms": 0.23280000686645508,
+      "mean": 0.07760000228881836,
+      "std": 0.0008158434896923502,
+      "count": 3
+    },
+    {
+      "name": "forward kernel strain_rhs_a82dd6fa_00afba55",
+      "flag": 1,
+      "sum_ms": 0.2178559973835945,
+      "mean": 0.07261866579453151,
+      "std": 0.00042479676357633044,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _bsr_transpose_values_a814354d",
+      "flag": 1,
+      "sum_ms": 0.21084799617528915,
+      "mean": 0.07028266539176305,
+      "std": 0.003955275022475979,
+      "count": 3
+    },
+    {
+      "name": "forward kernel dispatch_bilinear_kernel_fn_ad327f5c_66abae96",
+      "flag": 1,
+      "sum_ms": 0.19571200758218765,
+      "mean": 0.06523733586072922,
+      "std": 0.00027937570379876493,
+      "count": 3
+    },
+    {
+      "name": "memcpy DtoH",
+      "flag": 4,
+      "sum_ms": 0.18604800023604184,
+      "mean": 0.005637818188970965,
+      "std": 0.002651240194453541,
+      "count": 33
+    },
+    {
+      "name": "forward kernel dispatch_linear_kernel_fn_221a0c5b_ba562e53",
+      "flag": 1,
+      "sum_ms": 0.17718400061130524,
+      "mean": 0.029530666768550873,
+      "std": 0.0029150122841127895,
+      "count": 6
+    },
+    {
+      "name": "forward kernel apply_stress_gs_d6f9fcd1",
+      "flag": 1,
+      "sum_ms": 0.17180800065398216,
+      "mean": 0.007158666693915923,
+      "std": 0.0006370250794894983,
+      "count": 24
+    },
+    {
+      "name": "builtin kernel bsr_find_row_offsets",
+      "flag": 2,
+      "sum_ms": 0.16591999912634492,
+      "mean": 0.009217777729241384,
+      "std": 0.004137298398910502,
+      "count": 18
+    },
+    {
+      "name": "forward kernel update_particle_strains_05e6f20d_96650bb7",
+      "flag": 1,
+      "sum_ms": 0.14844799786806107,
+      "mean": 0.049482665956020355,
+      "std": 0.0009654367854147941,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _cell_edge_indices_b4604a4d",
+      "flag": 1,
+      "sum_ms": 0.14672000333666801,
+      "mean": 0.048906667778889336,
+      "std": 0.0003016994344717952,
+      "count": 3
+    },
+    {
+      "name": "forward kernel apply_subgrid_impulse_warmstart_8cb56a7c",
+      "flag": 1,
+      "sum_ms": 0.14294400066137314,
+      "mean": 0.04764800022045771,
+      "std": 0.0006868196182293253,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _prepare_node_sort_kernel_2830f90b",
+      "flag": 1,
+      "sum_ms": 0.14259199984371662,
+      "mean": 0.005941333326821526,
+      "std": 0.0027249784419519463,
+      "count": 24
+    },
+    {
+      "name": "forward kernel fill_element_node_indices_9de2a1e8_ee90ffbc",
+      "flag": 1,
+      "sum_ms": 0.1392959989607334,
+      "mean": 0.046431999653577805,
+      "std": 0.0013599052765959241,
+      "count": 3
+    },
+    {
+      "name": "forward kernel apply_subgrid_impulse_fe96c186",
+      "flag": 1,
+      "sum_ms": 0.12131199985742569,
+      "mean": 0.04043733328580856,
+      "std": 0.0002537683101408723,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _scatter_node_counts_5042823c",
+      "flag": 1,
+      "sum_ms": 0.12080000038258731,
+      "mean": 0.005033333349274471,
+      "std": 0.001959014301487221,
+      "count": 24
+    },
+    {
+      "name": "builtin kernel bsr_count_active_blocks",
+      "flag": 2,
+      "sum_ms": 0.11993600055575371,
+      "mean": 0.0399786668519179,
+      "std": 0.0002866144211562001,
+      "count": 3
+    },
+    {
+      "name": "forward kernel advect_particles_da2e7b35_63f68cb1",
+      "flag": 1,
+      "sum_ms": 0.11158399656414986,
+      "mean": 0.037194665521383286,
+      "std": 0.0009654367854147941,
+      "count": 3
+    },
+    {
+      "name": "forward kernel dispatch_linear_kernel_fn_03941031_99568573",
+      "flag": 1,
+      "sum_ms": 0.10700799711048603,
+      "mean": 0.017834666185081005,
+      "std": 0.00042759894610094564,
+      "count": 6
+    },
+    {
+      "name": "memcpy DtoD",
+      "flag": 4,
+      "sum_ms": 0.09913600061554462,
+      "mean": 0.004720761934073553,
+      "std": 0.0018532030001713155,
+      "count": 21
+    },
+    {
+      "name": "forward kernel integrate_fraction_fb680f8c_0988a694",
+      "flag": 1,
+      "sum_ms": 0.0947519987821579,
+      "mean": 0.031583999594052635,
+      "std": 0.0024239866991928836,
+      "count": 3
+    },
+    {
+      "name": "forward kernel scatter_field_dof_values_77fae76d",
+      "flag": 1,
+      "sum_ms": 0.08975999988615513,
+      "mean": 0.02991999996205171,
+      "std": 0.00022627413682417438,
+      "count": 3
+    },
+    {
+      "name": "forward kernel node_category_from_cells_kernel_ba7e979e_465b3397",
+      "flag": 1,
+      "sum_ms": 0.0894399993121624,
+      "mean": 0.029813333104054134,
+      "std": 0.0005432675944915821,
+      "count": 3
+    },
+    {
+      "name": "forward kernel dispatch_linear_kernel_fn_95c76cfa_ce180265",
+      "flag": 1,
+      "sum_ms": 0.08457599859684706,
+      "mean": 0.014095999766141176,
+      "std": 0.00032357988272911653,
+      "count": 6
+    },
+    {
+      "name": "forward kernel SpaceRestriction___split_vertex_element_index_d19d2c20",
+      "flag": 1,
+      "sum_ms": 0.07388800056651235,
+      "mean": 0.0061573333805426955,
+      "std": 0.002434926681097705,
+      "count": 12
+    },
+    {
+      "name": "forward kernel dispatch_bilinear_kernel_fn_15769d49_d027c659",
+      "flag": 1,
+      "sum_ms": 0.07094400003552437,
+      "mean": 0.023648000011841457,
+      "std": 0.0001713325291759919,
+      "count": 3
+    },
+    {
+      "name": "forward kernel strain_delta_form_ed8872c6_c39c4406",
+      "flag": 1,
+      "sum_ms": 0.06928000040352345,
+      "mean": 0.02309333346784115,
+      "std": 0.00046763368723411213,
+      "count": 3
+    },
+    {
+      "name": "forward kernel compute_collider_delassus_diagonal_f1529e24",
+      "flag": 1,
+      "sum_ms": 0.0655359998345375,
+      "mean": 0.02184533327817917,
+      "std": 0.0002866138203785754,
+      "count": 3
+    },
+    {
+      "name": "forward kernel postprocess_stress_and_strain_8653b339",
+      "flag": 1,
+      "sum_ms": 0.0579840000718832,
+      "mean": 0.019328000023961067,
+      "std": 0.000536099016915214,
+      "count": 3
+    },
+    {
+      "name": "forward kernel NodePartition___scatter_partition_indices_acde3760",
+      "flag": 1,
+      "sum_ms": 0.05635200021788478,
+      "mean": 0.006261333357542753,
+      "std": 0.0019763579665483884,
+      "count": 9
+    },
+    {
+      "name": "forward kernel integrate_yield_parameters_d09c2f74_4c80c4cf",
+      "flag": 1,
+      "sum_ms": 0.05507199838757515,
+      "mean": 0.018357332795858383,
+      "std": 0.0003913371234962071,
+      "count": 3
+    },
+    {
+      "name": "forward kernel world_position_b6576842_b0934f49",
+      "flag": 1,
+      "sum_ms": 0.05366399884223938,
+      "mean": 0.017887999614079792,
+      "std": 0.0002715293154127469,
+      "count": 3
+    },
+    {
+      "name": "forward kernel fill_element_node_indices_5e2618ed_3c0a0c8a",
+      "flag": 1,
+      "sum_ms": 0.05318399891257286,
+      "mean": 0.017727999637524288,
+      "std": 0.0003396629412539343,
+      "count": 3
+    },
+    {
+      "name": "forward kernel integrate_particle_stress_3f289e43_a72a5758",
+      "flag": 1,
+      "sum_ms": 0.052192000672221184,
+      "mean": 0.017397333557407062,
+      "std": 0.0006899608119323427,
+      "count": 3
+    },
+    {
+      "name": "forward kernel node_category_from_cells_kernel_9afb1804_1869e9c3",
+      "flag": 1,
+      "sum_ms": 0.04316799994558096,
+      "mean": 0.014389333315193653,
+      "std": 0.00034099999621957193,
+      "count": 3
+    },
+    {
+      "name": "forward kernel dispatch_linear_kernel_fn_b9abd8b5_21fe395b",
+      "flag": 1,
+      "sum_ms": 0.04070399980992079,
+      "mean": 0.013567999936640263,
+      "std": 0.0001810193972652739,
+      "count": 3
+    },
+    {
+      "name": "forward kernel integrate_velocity_d22ba55a_5de6e728",
+      "flag": 1,
+      "sum_ms": 0.04035200085490942,
+      "mean": 0.013450666951636473,
+      "std": 0.0018705333539548678,
+      "count": 3
+    },
+    {
+      "name": "forward kernel inverse_scale_sym_tensor_87098362",
+      "flag": 1,
+      "sum_ms": 0.033856000285595655,
+      "mean": 0.005642666714265943,
+      "std": 0.0004918247858662415,
+      "count": 6
+    },
+    {
+      "name": "forward kernel free_velocity_05f582f0",
+      "flag": 1,
+      "sum_ms": 0.0313919996842742,
+      "mean": 0.010463999894758066,
+      "std": 0.0007920672228169403,
+      "count": 3
+    },
+    {
+      "name": "forward kernel dispatch_bilinear_kernel_fn_e6c009ef_49df6281",
+      "flag": 1,
+      "sum_ms": 0.0289280004799366,
+      "mean": 0.009642666826645533,
+      "std": 0.00025106351490980917,
+      "count": 3
+    },
+    {
+      "name": "forward kernel integrate_elastic_parameters_6c1b9b5c_152ba6c4",
+      "flag": 1,
+      "sum_ms": 0.02864000014960766,
+      "mean": 0.009546666716535887,
+      "std": 0.0002643096033641036,
+      "count": 3
+    },
+    {
+      "name": "forward kernel average_elastic_parameters_474ec966",
+      "flag": 1,
+      "sum_ms": 0.028288000263273716,
+      "mean": 0.009429333421091238,
+      "std": 0.00037165357345206264,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _rebuildable_cell_node_indices_0aaf6af5",
+      "flag": 1,
+      "sum_ms": 0.027551999781280756,
+      "mean": 0.009183999927093586,
+      "std": 0.0011180173868048358,
+      "count": 3
+    },
+    {
+      "name": "forward kernel cell_color_5c588216_cfe560b4",
+      "flag": 1,
+      "sum_ms": 0.026783999521285295,
+      "mean": 0.008927999840428432,
+      "std": 0.002912878828434081,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _bsr_assign_list_blocks_156045b1",
+      "flag": 1,
+      "sum_ms": 0.026335999369621277,
+      "mean": 0.008778666456540426,
+      "std": 0.0027383639973385357,
+      "count": 3
+    },
+    {
+      "name": "forward kernel mark_active_cells_9a5f2d1f_a97c316e",
+      "flag": 1,
+      "sum_ms": 0.02521600015461445,
+      "mean": 0.008405333384871483,
+      "std": 0.0010773859995328158,
+      "count": 3
+    },
+    {
+      "name": "forward kernel preprocess_stress_and_strain_41a99b60",
+      "flag": 1,
+      "sum_ms": 0.024608000181615353,
+      "mean": 0.008202666727205118,
+      "std": 6.575349464419094e-05,
+      "count": 3
+    },
+    {
+      "name": "forward kernel mass_form_f472bbe9_a88b4094",
+      "flag": 1,
+      "sum_ms": 0.024287999607622623,
+      "mean": 0.00809599986920754,
+      "std": 0.0014111478718451156,
+      "count": 3
+    },
+    {
+      "name": "forward kernel bin_particles_fd76d44f_f88c8793",
+      "flag": 1,
+      "sum_ms": 0.02300800010561943,
+      "mean": 0.00766933336853981,
+      "std": 0.00039911025636893367,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _rebuildable_candidate_mask_c11abb88",
+      "flag": 1,
+      "sum_ms": 0.019776000641286373,
+      "mean": 0.006592000213762124,
+      "std": 0.0009111107678843369,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _bsr_assign_copy_blocks_efac61cd",
+      "flag": 1,
+      "sum_ms": 0.019071999937295914,
+      "mean": 0.0063573333124319715,
+      "std": 0.00012347552815864584,
+      "count": 3
+    },
+    {
+      "name": "forward kernel _identity_field_3c12980b_ebff7e33",
+      "flag": 1,
+      "sum_ms": 0.019007999915629625,
+      "mean": 0.006335999971876542,
+      "std": 0.0003866573194374608,
+      "count": 3
+    },
+    {
+      "name": "forward kernel dispatch_linear_kernel_fn_e7c7d193_b4a56918",
+      "flag": 1,
+      "sum_ms": 0.01750400010496378,
+      "mean": 0.0058346667016545934,
+      "std": 0.00048342475311590074,
+      "count": 3
+    },
+    {
+      "name": "forward kernel quadrature_point_element_indices_a85c1c77_aa37252c",
+      "flag": 1,
+      "sum_ms": 0.017376000061631203,
+      "mean": 0.0057920000205437345,
+      "std": 0.00021386609728786602,
+      "count": 3
+    },
+    {
+      "name": "forward kernel inverse_scale_vector_be470fd2",
+      "flag": 1,
+      "sum_ms": 0.017376000061631203,
+      "mean": 0.0057920000205437345,
+      "std": 4.525473955890048e-05,
+      "count": 3
+    },
+    {
+      "name": "forward kernel integrate_active_fraction_b2657031_16a2919d",
+      "flag": 1,
+      "sum_ms": 0.01596799958497286,
+      "mean": 0.005322666528324286,
+      "std": 0.0003050741259454918,
+      "count": 3
+    },
+    {
+      "name": "forward kernel finalize_cell_particle_data_7c691ab5_e4f71784",
+      "flag": 1,
+      "sum_ms": 0.015936000272631645,
+      "mean": 0.005312000090877215,
+      "std": 0.0006026431230427262,
+      "count": 3
+    },
+    {
+      "name": "forward kernel compute_eigenvalues_398d95c6",
+      "flag": 1,
+      "sum_ms": 0.01568000018596649,
+      "mean": 0.0052266667286554975,
+      "std": 0.000450532507888464,
+      "count": 3
+    },
+    {
+      "name": "forward kernel integrate_active_fraction_236aef5b_c568e89e",
+      "flag": 1,
+      "sum_ms": 0.015232000034302473,
+      "mean": 0.005077333344767491,
+      "std": 0.0005438954467051455,
+      "count": 3
+    }
+  ],
+  "convergence_diagnostic_3_steps": "Gauss-Seidel terminated after 101 iterations with residuals 1.1386530786694493e-05, 0.0030118416470034195\nGauss-Seidel terminated after 101 iterations with residuals nan, 0.0005536802983455354\nGauss-Seidel terminated after 101 iterations with residuals 1.2857919500675052e-05, 0.0006453542399594531\n",
+  "source_sha256": {
+    "render_grains.py": "677b38cbded8c418e363f44ec49d1c1a1224697397326c85aa405d636b7dfe28",
+    "solver_implicit_mpm.py": "fe45b561b1065f21bbd4d7bfa033933e5e38df6faec0ef217552392687448f68",
+    "particle_surface_colliders.py": "d117bec30e4febdf8cb37ff52d3199f73a6c705a800e60e31822207567514afa",
+    "rheology_solver_kernels.py": "66baec554b7b4a849323cbe4d8c0b860546ddbf2e2b394b4d659a409c13bae69",
+    "__init__.py": "c0951f53ccd4911a286eefe6f07f714cef53d3007ceaedc950bcdabe5ce0af05",
+    "rasterized_collisions.py": "206424600b9956f48bc97aad17177b44892099a4d20e0602e4466bd9a36c8b73",
+    "implicit_mpm_model.py": "d10a34b28f05c07a7511ee0165e2dea08261b1c040b2bfe4dbffb9c46f9c4615",
+    "implicit_mpm_solver_kernels.py": "65a1df46a96de03dd79de12a91025e072cb056a6c477b96b2e5cbeed08ad05ec",
+    "contact_solver_kernels.py": "ce9ef5848ceffcb7dfe6c2d006e15979e1800b58ae03b57511d105ce8da2a1ee",
+    "solve_rheology.py": "7bd07f9a04949b9a7d9d7fceb6e24e52b356206f6779d87e22356e5b5e91f366"
+  }
+}

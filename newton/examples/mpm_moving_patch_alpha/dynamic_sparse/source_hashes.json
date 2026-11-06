@@ -1,0 +1,8 @@
+{
+  "newton/examples/mpm_moving_patch/example_mujoco_mpm_coupled_solver.py": "ff0af42973d262e716a059c2ecb951c39188c3e27dcf42e2a0dea393a772d2ea",
+  "newton/examples/mpm_moving_patch/example_mujoco_mpm_coupled_solver_sparse.py": "bfe3974b50d128f65818742e72cd64e8fe4c392878401ec1820af4b53b1ee8c4",
+  "newton/examples/mpm_moving_patch/example_mujoco_mpm_coupled_solver_moving_patch.py": "5b3537ee78ef796daec43062c96693deafd8fe40d85334e1f33fde13e093a387",
+  "newton/examples/mpm_moving_patch/object_controller.py": "6e2c66e5373cd73235d0c8abe0d173c8328111a759c82ca935f04b6e3f281901",
+  "newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py": "584fe578711a96b2fb0abb970bba12f5fe1e1360d2259fb1bb2d930070a055a8",
+  "newton/_src/solvers/coupled/solver_coupled_proxy.py": "e481e07346fd4b569b22b34a722ae44a3ced10f8413f8c2da594a446e6afd2e1"
+}

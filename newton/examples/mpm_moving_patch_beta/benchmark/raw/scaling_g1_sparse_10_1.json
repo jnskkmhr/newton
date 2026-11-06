@@ -1,0 +1,1 @@
+{"case": {"name": "scaling_g1_sparse_10", "experiment": "scaling", "scene": "g1", "method": "sparse", "size": 10, "terrain_size": 10.0, "background_size": 12.0, "particle_width": 10.0, "boundary_width": 0.5}, "repeat": 1, "status": "failed", "error": "exit -9"}

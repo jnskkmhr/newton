@@ -1,0 +1,23 @@
+{
+  "recorded_utc": "2026-09-25T00:14:53.068987+00:00",
+  "python": "3.12.14",
+  "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+  "versions": {
+    "warp-lang": "1.17.0",
+    "mujoco": "3.12.0",
+    "mujoco-warp": "3.12.0",
+    "numpy": "2.5.0"
+  },
+  "gpu": "NVIDIA GeForce RTX 5090, 595.84, 32607 MiB",
+  "source_sha256": {
+    "newton/examples/mpm_moving_patch_beta2/impl/moving_terrain_mpm.py": "723c769e795c0e64b1bf002dff9e54bcf5d8d1ea80924e3a60e21085f2dfd419",
+    "newton/examples/mpm_moving_patch_beta2/impl/particle_rendering.py": "8de94a5202ff527939c4b2bcec0d27f5496e1ab87fd6c7dc112028eca7c08196",
+    "newton/examples/mpm_moving_patch_beta2/impl/terrain_height_cache.py": "54aa6418d4b8bda61050749f20e94a08b4c741bf0600e224c8fd098c7072d298",
+    "newton/examples/mpm_moving_patch_beta2/impl/terrain_generator.py": "ca5bbcaabb6fe6a42372b62f1a1540e8cbe3c2ec82e16d739cd1b6d4ca82758d",
+    "newton/examples/mpm_moving_patch_beta2/example_moving_terrain_mpm_box_beta2.py": "d15f18dd131247696a040f41e126e9076b721824eda8f6729d4aa72107f9937d",
+    "newton/examples/mpm_moving_patch_beta/impl/moving_terrain_mpm.py": "a5df4cc2335b7dee1fde7e159cf94eec6a9c07bdab8e7c4b09b64db60e79dc24",
+    "newton/_src/solvers/implicit_mpm/implicit_mpm_model.py": "d10a34b28f05c07a7511ee0165e2dea08261b1c040b2bfe4dbffb9c46f9c4615",
+    "newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py": "fe45b561b1065f21bbd4d7bfa033933e5e38df6faec0ef217552392687448f68",
+    "newton/examples/mpm_moving_patch_beta2/benchmark/compare.py": "886f3b6c75b595d9b2fb36fbcf558aa418fbdf745559ac115867331a835fe17a"
+  }
+}

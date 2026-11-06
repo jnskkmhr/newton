@@ -1,0 +1,12 @@
+{
+  "command": [
+    "newton/examples/mpm_moving_patch/sparse_capacity_sweep/run_sweep.py",
+    "--widths",
+    "3"
+  ],
+  "time": "2026-09-22T10:57:26-0700",
+  "gpu": "Tue Sep 22 10:57:26 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 595.84                 Driver Version: 595.84         CUDA Version: 13.2     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 5090        Off |   00000000:02:00.0  On |                  N/A |\n| 36%   48C    P3             63W /  575W |    2897MiB /  32607MiB |      6%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A            5831      G   /usr/lib/xorg/Xorg                     1377MiB |\n|    0   N/A  N/A            6072      G   /usr/bin/gnome-shell                    136MiB |\n|    0   N/A  N/A            6554      G   ...exec/xdg-desktop-portal-gnome          8MiB |\n|    0   N/A  N/A            7923      G   ...rack-uuid=3190708988185955192        566MiB |\n|    0   N/A  N/A           28177      G   ...rack-uuid=3190708988185955192        163MiB |\n|    0   N/A  N/A           29148      G   ...rack-uuid=3190708988185955192         87MiB |\n|    0   N/A  N/A          175162      G   /usr/bin/obs                            438MiB |\n+-----------------------------------------------------------------------------------------+\n",
+  "warmup": 60,
+  "steps": 60,
+  "repeats": 1
+}

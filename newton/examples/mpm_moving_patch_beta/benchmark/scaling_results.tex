@@ -1,0 +1,18 @@
+Moving-patch keeps 972,000 MPM particles for every background size in this sweep. The measured ranges across 3--10\,m are:
+\textbf{Box:} 38.65--43.70\,ms per step and 4.11--4.20\,GiB mean GPU memory.
+\textbf{Rover:} 38.63--43.96\,ms per step and 4.87--5.01\,GiB mean GPU memory.
+\textbf{G1:} 42.18--42.38\,ms per step and 5.02--5.50\,GiB mean GPU memory.
+At the 10\,m endpoint, the comparison is:
+\begin{center}\small\begin{tabular}{llrr}\toprule
+Scene & Method & Time [ms] & Memory [GiB] \\\midrule
+Box & fixed & $132.30\pm6.61$ & $19.87\pm1.41$ \\
+Box & sparse & --- & --- \\
+Box & moving-patch & $43.70\pm1.76$ & $4.20\pm0.51$ \\
+Rover & fixed & --- & --- \\
+Rover & sparse & --- & --- \\
+Rover & moving-patch & $39.37\pm1.36$ & $5.00\pm0.53$ \\
+G1 & fixed & --- & --- \\
+G1 & sparse & --- & --- \\
+G1 & moving-patch & $42.19\pm1.83$ & $5.13\pm0.53$ \\
+\bottomrule\end{tabular}\end{center}
+The full-terrain methods retain all particles as terrain size grows. Moving-patch instead limits the local material simulation to a fixed allocation. Its background height map and ground still grow with terrain area, so approximately flat curves over this range do not imply constant memory for an arbitrarily large background.

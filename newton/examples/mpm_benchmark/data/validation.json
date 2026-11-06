@@ -1,0 +1,10 @@
+{
+  "completed_runs": 63,
+  "coupled_intervals": 151200,
+  "all_finite": true,
+  "momentum_balance_validated": true,
+  "lagged_feedback_transfer_validated": true,
+  "same_solver_source_and_dependencies": true,
+  "maximum_relative_momentum_balance_error": 3.101164759056624e-07,
+  "rigid_ground_contact_cases": []
+}

@@ -1,0 +1,20 @@
+{
+  "jitter_width_mm": 2.0,
+  "sand_depth_cm": 45.0,
+  "samples": 2400,
+  "duration_s": 6.0,
+  "wall_seconds": 102.22537107393146,
+  "mean_penetration_cm": 4.091285839374366,
+  "std_penetration_cm": 1.5914201689717138,
+  "final_penetration_cm": 6.756912171840668,
+  "minimum_rigid_ground_clearance_cm": 38.24308782815933,
+  "mean_normal_force_N": 145.1689685485573,
+  "std_normal_force_N": 5.092442360485774,
+  "peak_rigid_ground_normal_force_N": 0.0,
+  "sand_surface_at_0p5s_cm": -0.4913181997835636,
+  "sand_surface_at_end_cm": -0.49206805415451527,
+  "maximum_momentum_balance_error_N": 1.756965479464493e-05,
+  "maximum_relative_momentum_balance_error": 2.3720506651290276e-07,
+  "feedback_transfer_validated": true,
+  "all_finite": true
+}

@@ -1,0 +1,952 @@
+{
+  "benchmark_sha256": "2dd9f0458af3e27f0c7078e74e26916c2696f18d8fd60d01a838ae116e2982c6",
+  "pythonpath": "/home/jkamohara/isaac/newton",
+  "jobs": 4,
+  "runs": [
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 0,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.0",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j00_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 2,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.002",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j02_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 4,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.004",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j04_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 6,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.006",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j06_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 8,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.008",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j08_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 10,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.01",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j10_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 12,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.012",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j12_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 14,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.014",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j14_d50"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 20,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d20",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.2",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d20"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 25,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d25",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.25",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d25"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 30,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d30",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.3",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d30"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 35,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d35",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.35",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d35"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 40,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d40",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.4",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d40"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 45,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d45",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.45",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d45"
+      ]
+    },
+    {
+      "jitter_width_mm": 16,
+      "sand_depth_cm": 50,
+      "folder": "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d50",
+      "command": [
+        "/home/jkamohara/isaac/IsaacLab/.venv/bin/python3",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/benchmark_box_jitter.py",
+        "--jitter",
+        "0.016",
+        "--sand-depth",
+        "0.5",
+        "--output",
+        "/home/jkamohara/isaac/newton/newton/examples/mpm_benchmark/data/j16_d50"
+      ]
+    }
+  ]
+}

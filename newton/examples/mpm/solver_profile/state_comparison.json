@@ -1,0 +1,92 @@
+{
+  "box_diagnostic_0": {
+    "q": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "qd": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_qd_grad": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_elastic_strain": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_Jp": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_stress": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_transform": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    }
+  },
+  "box_temporary_store_baseline_0": {
+    "q": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "qd": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_qd_grad": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_elastic_strain": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_Jp": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_stress": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_transform": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    }
+  },
+  "box_temporary_store_diagnostic_0": {
+    "q": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "qd": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_qd_grad": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_elastic_strain": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_Jp": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_stress": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    },
+    "particle_transform": {
+      "exact_equal": true,
+      "max_abs_difference": 0.0
+    }
+  }
+}

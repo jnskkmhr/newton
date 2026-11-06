@@ -1,0 +1,17 @@
+Matched allocations contain 108,000, 432,000, and 1,728,000 particles for 1, 2, and 4\,m side lengths, respectively. At the 2\,m allocation:
+\begin{center}\small\begin{tabular}{llrr}\toprule
+Scene & Method & Time [ms] & Memory [GiB] \\\midrule
+Box & fixed & $28.89\pm19.42$ & $1.42\pm0.06$ \\
+Box & sparse & $31.01\pm16.03$ & $2.72\pm0.33$ \\
+Box & moving-patch & $33.09\pm15.70$ & $2.75\pm0.36$ \\
+Rover & fixed & $24.33\pm1.23$ & $1.98\pm0.08$ \\
+Rover & sparse & $30.74\pm1.24$ & $3.06\pm0.35$ \\
+Rover & moving-patch & $30.96\pm1.11$ & $3.15\pm0.33$ \\
+G1 & fixed & $26.26\pm1.46$ & $1.98\pm0.06$ \\
+G1 & sparse & $33.21\pm1.43$ & $3.25\pm0.35$ \\
+G1 & moving-patch & $33.52\pm1.64$ & $3.22\pm0.34$ \\
+\bottomrule\end{tabular}\end{center}
+For Box, moving-patch minus sparse is +2.08\,ms (+6.7\%) and +0.03\,GiB. Moving-patch minus fixed is +4.21\,ms and +1.33\,GiB.
+For Rover, moving-patch minus sparse is +0.22\,ms (+0.7\%) and +0.09\,GiB. Moving-patch minus fixed is +6.63\,ms and +1.17\,GiB.
+For G1, moving-patch minus sparse is +0.31\,ms (+0.9\%) and -0.03\,GiB. Moving-patch minus fixed is +7.26\,ms and +1.24\,GiB.
+The sparse comparison is the closer estimate of moving-patch overhead because it keeps the same grid representation. Differences against fixed include both grid implementation and moving-patch handling. The measurements include height-cache updates and particle recycling, but do not isolate those kernels; differences should not be attributed entirely to recycling.

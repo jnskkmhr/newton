@@ -1,0 +1,1078 @@
+[
+  {
+    "name": "scaling_box_fixed_10",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 10,
+    "terrain_size": 10.0,
+    "background_size": 10.0,
+    "particle_width": 10.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 120.46437154756859,
+    "steps_per_second": 8.301209620349226,
+    "real_time_factor": 0.04150604810174613,
+    "std_ms": 2.5976367022868585,
+    "steady_gib": 19.784189944096504,
+    "steady_std_gib": 1.3790796520105033,
+    "peak_gib": 20.65948486328125,
+    "particle_count": 11160000,
+    "dynamic_particles": 9039599,
+    "active_cells_min": 479819,
+    "active_cells_max": 479819,
+    "cell_capacity": 951808,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      120.74107456331451,
+      120.18766853182267
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.20145639777183533,
+        -0.0007038889452815056,
+        0.7906906008720398
+      ],
+      [
+        0.20146816968917847,
+        -0.0006986552034504712,
+        0.7906985878944397
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_3",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 3,
+    "terrain_size": 3.0,
+    "background_size": 3.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 20.907725640184555,
+    "steps_per_second": 47.82920998724053,
+    "real_time_factor": 0.23914604993620264,
+    "std_ms": 1.066274162452256,
+    "steady_gib": 2.3763346033772144,
+    "steady_std_gib": 0.14800675722510676,
+    "peak_gib": 2.63739013671875,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 43186,
+    "active_cells_max": 43186,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      20.892225971911103,
+      20.92322530845801
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.20314595103263855,
+        -0.00014814345922786742,
+        0.7906150221824646
+      ],
+      [
+        0.20325465500354767,
+        -0.0001293937093578279,
+        0.7905836701393127
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_4",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 4,
+    "terrain_size": 4.0,
+    "background_size": 4.0,
+    "particle_width": 4.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 27.402909722489614,
+    "steps_per_second": 36.49247507388963,
+    "real_time_factor": 0.18246237536944815,
+    "std_ms": 1.3645190813990256,
+    "steady_gib": 3.674984833688447,
+    "steady_std_gib": 0.27339987270022803,
+    "peak_gib": 4.00323486328125,
+    "particle_count": 1785600,
+    "dynamic_particles": 1004400,
+    "active_cells_min": 76767,
+    "active_cells_max": 76767,
+    "cell_capacity": 170368,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      27.49217260008057,
+      27.31364684489866
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.2039792686700821,
+        0.0003376015811227262,
+        0.7896755337715149
+      ],
+      [
+        0.2041431963443756,
+        0.0003500363964121789,
+        0.7897310256958008
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_5",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 5,
+    "terrain_size": 5.0,
+    "background_size": 5.0,
+    "particle_width": 5.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 37.87862718105316,
+    "steps_per_second": 26.400112000368342,
+    "real_time_factor": 0.1320005600018417,
+    "std_ms": 1.6249338849133608,
+    "steady_gib": 5.098156845360472,
+    "steady_std_gib": 0.5367531322551832,
+    "peak_gib": 5.81573486328125,
+    "particle_count": 2790000,
+    "dynamic_particles": 1785600,
+    "active_cells_min": 119941,
+    "active_cells_max": 119941,
+    "cell_capacity": 256608,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      37.940514356984444,
+      37.81674000512188
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.2015700340270996,
+        0.0012545731151476502,
+        0.7902233004570007
+      ],
+      [
+        0.20163945853710175,
+        0.001242481404915452,
+        0.7902268171310425
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_6",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 6,
+    "terrain_size": 6.0,
+    "background_size": 6.0,
+    "particle_width": 6.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 51.511462923372164,
+    "steps_per_second": 19.413154728057094,
+    "real_time_factor": 0.09706577364028547,
+    "std_ms": 1.4993775205162938,
+    "steady_gib": 7.391600581227391,
+    "steady_std_gib": 0.6327541977801818,
+    "peak_gib": 7.99462890625,
+    "particle_count": 4017600,
+    "dynamic_particles": 2790000,
+    "active_cells_min": 172732,
+    "active_cells_max": 172732,
+    "cell_capacity": 360448,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      51.726985029721014,
+      51.295940817023315
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.19893085956573486,
+        -0.00023235895787365735,
+        0.7900975346565247
+      ],
+      [
+        0.19894656538963318,
+        -0.00023343291832134128,
+        0.790006160736084
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_7",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 7,
+    "terrain_size": 7.0,
+    "background_size": 7.0,
+    "particle_width": 7.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 67.77093424384172,
+    "steps_per_second": 14.755588234949986,
+    "real_time_factor": 0.07377794117474992,
+    "std_ms": 1.5711144299212756,
+    "steady_gib": 10.014406386097953,
+    "steady_std_gib": 0.7514316144568621,
+    "peak_gib": 10.58538818359375,
+    "particle_count": 5468400,
+    "dynamic_particles": 4017600,
+    "active_cells_min": 235094,
+    "active_cells_max": 235094,
+    "cell_capacity": 481888,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      68.15644979476929,
+      67.38541869291414
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.20080333948135376,
+        -0.00030460453126579523,
+        0.7905240058898926
+      ],
+      [
+        0.20077401399612427,
+        -0.00030462341965176165,
+        0.7905218601226807
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_8",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 8,
+    "terrain_size": 8.0,
+    "background_size": 8.0,
+    "particle_width": 8.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 83.54294396859284,
+    "steps_per_second": 11.969891800508494,
+    "real_time_factor": 0.059849459002542474,
+    "std_ms": 1.9299235820013516,
+    "steady_gib": 12.827462919631808,
+    "steady_std_gib": 0.9683988083991832,
+    "peak_gib": 13.55841064453125,
+    "particle_count": 7142400,
+    "dynamic_particles": 5468400,
+    "active_cells_min": 307080,
+    "active_cells_max": 307080,
+    "cell_capacity": 620928,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      83.94674660094704,
+      83.13914133623864
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.20039145648479462,
+        -0.00014845716941636056,
+        0.790996253490448
+      ],
+      [
+        0.20035295188426971,
+        -0.00015675288159400225,
+        0.7910277247428894
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_fixed_9",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "fixed",
+    "size": 9,
+    "terrain_size": 9.0,
+    "background_size": 9.0,
+    "particle_width": 9.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 100.97321945087363,
+    "steps_per_second": 9.903616081950608,
+    "real_time_factor": 0.04951808040975304,
+    "std_ms": 1.8402843693690332,
+    "steady_gib": 16.250244340740267,
+    "steady_std_gib": 1.0179254081244395,
+    "peak_gib": 16.89776611328125,
+    "particle_count": 9039600,
+    "dynamic_particles": 7142400,
+    "active_cells_min": 388629,
+    "active_cells_max": 388629,
+    "cell_capacity": 777568,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      101.59996639859553,
+      100.34647250315174
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.20037046074867249,
+        -1.5501625966862775e-05,
+        0.7909655570983887
+      ],
+      [
+        0.20034658908843994,
+        -1.9154402252752334e-05,
+        0.7909708619117737
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_10",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 10,
+    "terrain_size": 10.0,
+    "background_size": 10.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 35.369202378205955,
+    "steps_per_second": 28.273184939454193,
+    "real_time_factor": 0.14136592469727097,
+    "std_ms": 1.316667159292448,
+    "steady_gib": 4.131884364454959,
+    "steady_std_gib": 0.5346895586873783,
+    "peak_gib": 4.92120361328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.426679746403046,
+      35.311725010008864
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17920319736003876,
+        -1.8768558220472187e-05,
+        0.7816969752311707
+      ],
+      [
+        0.17890076339244843,
+        -5.103516377857886e-05,
+        0.7817652225494385
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_3",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 3,
+    "terrain_size": 3.0,
+    "background_size": 3.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 35.39437187835574,
+    "steps_per_second": 28.253079428470294,
+    "real_time_factor": 0.14126539714235145,
+    "std_ms": 1.6997101106748314,
+    "steady_gib": 4.11960095557097,
+    "steady_std_gib": 0.5295848409898284,
+    "peak_gib": 4.90948486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.648077220345534,
+      35.14066653636595
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17893008887767792,
+        -4.896121026831679e-05,
+        0.7817685604095459
+      ],
+      [
+        0.17874448001384735,
+        -8.497763337800279e-05,
+        0.7818378806114197
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_4",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 4,
+    "terrain_size": 4.0,
+    "background_size": 4.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 35.23625932905512,
+    "steps_per_second": 28.3798569723722,
+    "real_time_factor": 0.14189928486186099,
+    "std_ms": 1.3936219770532687,
+    "steady_gib": 4.123099886755428,
+    "steady_std_gib": 0.5127863221448979,
+    "peak_gib": 4.90948486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.34345963736996,
+      35.12905902074029
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17890490591526031,
+        -5.1407190767349675e-05,
+        0.7817659378051758
+      ],
+      [
+        0.17872770130634308,
+        -8.532772335456684e-05,
+        0.7818329334259033
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_5",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 5,
+    "terrain_size": 5.0,
+    "background_size": 5.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 35.37070312964109,
+    "steps_per_second": 28.271985330197957,
+    "real_time_factor": 0.1413599266509898,
+    "std_ms": 1.2744522000219392,
+    "steady_gib": 4.135868842612969,
+    "steady_std_gib": 0.5231369559319645,
+    "peak_gib": 4.97198486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.47333122619117,
+      35.26807503309101
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.1789354532957077,
+        -4.877480387222022e-05,
+        0.7817701101303101
+      ],
+      [
+        0.17921149730682373,
+        -1.811257970985025e-05,
+        0.7816994190216064
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_6",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 6,
+    "terrain_size": 6.0,
+    "background_size": 6.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 36.071628992600985,
+    "steps_per_second": 27.722618243970075,
+    "real_time_factor": 0.13861309121985038,
+    "std_ms": 4.435749224812399,
+    "steady_gib": 4.167425621489775,
+    "steady_std_gib": 0.5074034858939281,
+    "peak_gib": 5.00323486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      36.99528214521706,
+      35.147975839984916
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17896337807178497,
+        -4.6509590902132913e-05,
+        0.7817670702934265
+      ],
+      [
+        0.1789405643939972,
+        -4.712318695965223e-05,
+        0.7817718386650085
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_7",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 7,
+    "terrain_size": 7.0,
+    "background_size": 7.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 35.0804875131386,
+    "steps_per_second": 28.50587522837226,
+    "real_time_factor": 0.1425293761418613,
+    "std_ms": 1.441249782688408,
+    "steady_gib": 4.125363029009923,
+    "steady_std_gib": 0.5360883885516572,
+    "peak_gib": 4.94073486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.19086268652851,
+      34.97011233974869
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17873431742191315,
+        -8.650507515994832e-05,
+        0.7818459272384644
+      ],
+      [
+        0.17875297367572784,
+        -6.22018487774767e-05,
+        0.7818267345428467
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_8",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 8,
+    "terrain_size": 8.0,
+    "background_size": 8.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 35.05215944450659,
+    "steps_per_second": 28.52891279303823,
+    "real_time_factor": 0.14264456396519115,
+    "std_ms": 1.2166471942939368,
+    "steady_gib": 4.162150740058501,
+    "steady_std_gib": 0.5261786985075475,
+    "peak_gib": 4.90948486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.32168813593065,
+      34.782630753082536
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.1788538694381714,
+        -5.371238148654811e-05,
+        0.781782865524292
+      ],
+      [
+        0.17890670895576477,
+        -4.926401743432507e-05,
+        0.7817885875701904
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_moving-patch_9",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "moving-patch",
+    "size": 9,
+    "terrain_size": 9.0,
+    "background_size": 9.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 34.89648995688185,
+    "steps_per_second": 28.656177203942324,
+    "real_time_factor": 0.14328088601971162,
+    "std_ms": 1.184622914852375,
+    "steady_gib": 4.1123680478050595,
+    "steady_std_gib": 0.5304281086477654,
+    "peak_gib": 4.90948486328125,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      35.12326267470295,
+      34.66971723906075
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17913521826267242,
+        -1.2631204299395904e-05,
+        0.7817023992538452
+      ],
+      [
+        0.17899058759212494,
+        -4.6341156121343374e-05,
+        0.7817564010620117
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_10",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 10,
+    "terrain_size": 10.0,
+    "background_size": 10.0,
+    "particle_width": 10.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 0,
+    "failed_repeats": 2,
+    "particle_count": 11160000,
+    "dynamic_particles": 9039599,
+    "cell_capacity": 951808,
+    "peak_gib": 28.25396728515625,
+    "errors": [
+      "Traceback (most recent call last):\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 302, in worker\n    advance()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 297, in advance\n    scene.simulate()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/impl/base_example.py\", line 194, in simulate\n    self.solver.step(self.state_0, self.state_0, self.control, self.contacts, self.sim_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2219, in step\n    self._step_coupled(state_in, state_out, control, contacts, dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1335, in _step_coupled\n    self._step_proxy(state_in, control, contacts, dt, iteration_restart=k > 0)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1526, in _step_proxy\n    dst_contacts_used = self._step_entry(\n                        ^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2681, in _step_entry\n    entry.solver.step(entry.state_0, entry.state_0, control, contacts, substep_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 1928, in step\n    self._step_impl(state_in, state_out, dt, pic, scratch)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 2934, in _step_impl\n    rigidity_operator = self._build_collider_rigidity_operator(state_in, scratch, cell_volume)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 3120, in _build_collider_rigidity_operator\n    rigidity_operator = build_rigidity_operator(\n                        ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/rasterized_collisions.py\", line 868, in build_rigidity_operator\n    IJtm = wps.bsr_from_triplets(\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1574, in bsr_from_triplets\n    bsr_set_from_triplets(A, rows, columns, values, prune_numerical_zeros=prune_numerical_zeros)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1451, in bsr_set_from_triplets\n    _bsr_ensure_fits(dest, nnz=nnz)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 767, in _bsr_ensure_fits\n    bsr.values = wp.empty(\n                 ^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 9869, in empty\n    arr = warp.array(\n          ^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3418, in __init__\n    self._init_new(dtype, shape, strides, device, pinned)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3901, in _init_new\n    ptr = allocator.allocate(capacity)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 5046, in allocate\n    raise RuntimeError(f\"Failed to allocate {size_in_bytes} bytes on device '{self.device}'\")\nRuntimeError: Failed to allocate 2055905280 bytes on device 'cuda:0'\n",
+      "Traceback (most recent call last):\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 302, in worker\n    advance()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 297, in advance\n    scene.simulate()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/impl/base_example.py\", line 194, in simulate\n    self.solver.step(self.state_0, self.state_0, self.control, self.contacts, self.sim_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2219, in step\n    self._step_coupled(state_in, state_out, control, contacts, dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1335, in _step_coupled\n    self._step_proxy(state_in, control, contacts, dt, iteration_restart=k > 0)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1526, in _step_proxy\n    dst_contacts_used = self._step_entry(\n                        ^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2681, in _step_entry\n    entry.solver.step(entry.state_0, entry.state_0, control, contacts, substep_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 1928, in step\n    self._step_impl(state_in, state_out, dt, pic, scratch)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 2934, in _step_impl\n    rigidity_operator = self._build_collider_rigidity_operator(state_in, scratch, cell_volume)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 3120, in _build_collider_rigidity_operator\n    rigidity_operator = build_rigidity_operator(\n                        ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/rasterized_collisions.py\", line 868, in build_rigidity_operator\n    IJtm = wps.bsr_from_triplets(\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1574, in bsr_from_triplets\n    bsr_set_from_triplets(A, rows, columns, values, prune_numerical_zeros=prune_numerical_zeros)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1451, in bsr_set_from_triplets\n    _bsr_ensure_fits(dest, nnz=nnz)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 767, in _bsr_ensure_fits\n    bsr.values = wp.empty(\n                 ^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 9869, in empty\n    arr = warp.array(\n          ^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3418, in __init__\n    self._init_new(dtype, shape, strides, device, pinned)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3901, in _init_new\n    ptr = allocator.allocate(capacity)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 5046, in allocate\n    raise RuntimeError(f\"Failed to allocate {size_in_bytes} bytes on device '{self.device}'\")\nRuntimeError: Failed to allocate 2055905280 bytes on device 'cuda:0'\n"
+    ]
+  },
+  {
+    "name": "scaling_box_sparse_3",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 3,
+    "terrain_size": 3.0,
+    "background_size": 3.0,
+    "particle_width": 3.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 34.94042680288354,
+    "steps_per_second": 28.620142668591345,
+    "real_time_factor": 0.14310071334295674,
+    "std_ms": 1.282568600627503,
+    "steady_gib": 4.157865840676837,
+    "steady_std_gib": 0.5159192668623533,
+    "peak_gib": 4.94842529296875,
+    "particle_count": 1004400,
+    "dynamic_particles": 446400,
+    "active_cells_min": 40931,
+    "active_cells_max": 40931,
+    "cell_capacity": 101728,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      34.73881252498055,
+      35.142041080786534
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17914389073848724,
+        -1.3993259017297532e-05,
+        0.781712532043457
+      ],
+      [
+        0.17876318097114563,
+        -6.381553976098076e-05,
+        0.7818249464035034
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_4",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 4,
+    "terrain_size": 4.0,
+    "background_size": 4.0,
+    "particle_width": 4.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 55.36797611702544,
+    "steps_per_second": 18.060981638310306,
+    "real_time_factor": 0.09030490819155153,
+    "std_ms": 1.7855579167663227,
+    "steady_gib": 6.583261117562875,
+    "steady_std_gib": 0.8268595795078307,
+    "peak_gib": 7.62823486328125,
+    "particle_count": 1785600,
+    "dynamic_particles": 1004400,
+    "active_cells_min": 72171,
+    "active_cells_max": 72171,
+    "cell_capacity": 170368,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      55.6063298198084,
+      55.129622414242476
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17906717956066132,
+        0.00024392227351199836,
+        0.7814414501190186
+      ],
+      [
+        0.1790754795074463,
+        0.00029971773619763553,
+        0.7812332510948181
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_5",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 5,
+    "terrain_size": 5.0,
+    "background_size": 5.0,
+    "particle_width": 5.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 79.84707167372108,
+    "steps_per_second": 12.523940816343247,
+    "real_time_factor": 0.06261970408171623,
+    "std_ms": 2.0908268230221156,
+    "steady_gib": 9.656995956867808,
+    "steady_std_gib": 1.1917569175153198,
+    "peak_gib": 11.03436279296875,
+    "particle_count": 2790000,
+    "dynamic_particles": 1785600,
+    "active_cells_min": 112211,
+    "active_cells_max": 112211,
+    "cell_capacity": 256608,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      80.14575607764225,
+      79.5483872697999
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17899106442928314,
+        -0.00013541053340304643,
+        0.781706690788269
+      ],
+      [
+        0.178985133767128,
+        -0.00013586627028416842,
+        0.7817041873931885
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_6",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 6,
+    "terrain_size": 6.0,
+    "background_size": 6.0,
+    "particle_width": 6.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 109.66947745260161,
+    "steps_per_second": 9.118307328784283,
+    "real_time_factor": 0.04559153664392142,
+    "std_ms": 2.714543485475634,
+    "steady_gib": 13.379221536468227,
+    "steady_std_gib": 1.6292949480818884,
+    "peak_gib": 15.148681640625,
+    "particle_count": 4017600,
+    "dynamic_particles": 2790000,
+    "active_cells_min": 161051,
+    "active_cells_max": 161051,
+    "cell_capacity": 360448,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      109.67786632090186,
+      109.66108858430137
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17794303596019745,
+        -5.9815509303007275e-05,
+        0.7818344235420227
+      ],
+      [
+        0.17799772322177887,
+        -5.118814078741707e-05,
+        0.7818284034729004
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_7",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 7,
+    "terrain_size": 7.0,
+    "background_size": 7.0,
+    "particle_width": 7.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 145.55351839827685,
+    "steps_per_second": 6.870325162897873,
+    "real_time_factor": 0.03435162581448937,
+    "std_ms": 2.791386146446589,
+    "steady_gib": 17.975087099195484,
+    "steady_std_gib": 2.207404888881692,
+    "peak_gib": 20.0701904296875,
+    "particle_count": 5468400,
+    "dynamic_particles": 4017600,
+    "active_cells_min": 218691,
+    "active_cells_max": 218691,
+    "cell_capacity": 481888,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      145.51641701953486,
+      145.59061977701882
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.1784026175737381,
+        0.0003168644034303725,
+        0.7818244695663452
+      ],
+      [
+        0.17861728370189667,
+        0.00031072000274434686,
+        0.7817919254302979
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_8",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 8,
+    "terrain_size": 8.0,
+    "background_size": 8.0,
+    "particle_width": 8.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 2,
+    "failed_repeats": 0,
+    "mean_ms": 185.46525693071695,
+    "steps_per_second": 5.391845440753162,
+    "real_time_factor": 0.026959227203765812,
+    "std_ms": 3.1676595190548156,
+    "steady_gib": 23.178732872866128,
+    "steady_std_gib": 2.788840333683712,
+    "peak_gib": 25.66461181640625,
+    "particle_count": 7142400,
+    "dynamic_particles": 5468400,
+    "active_cells_min": 285131,
+    "active_cells_max": 285131,
+    "cell_capacity": 620928,
+    "measured_steps": 300,
+    "repeat_mean_ms": [
+      185.76557023062682,
+      185.1649436308071
+    ],
+    "patch_shifts": [
+      0,
+      0
+    ],
+    "final_body_position": [
+      [
+        0.17946141958236694,
+        1.7150494386442006e-05,
+        0.7815507054328918
+      ],
+      [
+        0.1794792264699936,
+        1.552185494801961e-05,
+        0.781552791595459
+      ]
+    ],
+    "errors": []
+  },
+  {
+    "name": "scaling_box_sparse_9",
+    "experiment": "scaling",
+    "scene": "box",
+    "method": "sparse",
+    "size": 9,
+    "terrain_size": 9.0,
+    "background_size": 9.0,
+    "particle_width": 9.0,
+    "boundary_width": 0.5,
+    "successful_repeats": 0,
+    "failed_repeats": 2,
+    "particle_count": 9039600,
+    "dynamic_particles": 7142400,
+    "cell_capacity": 777568,
+    "peak_gib": 28.44073486328125,
+    "errors": [
+      "Traceback (most recent call last):\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 302, in worker\n    advance()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 297, in advance\n    scene.simulate()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/impl/base_example.py\", line 194, in simulate\n    self.solver.step(self.state_0, self.state_0, self.control, self.contacts, self.sim_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2219, in step\n    self._step_coupled(state_in, state_out, control, contacts, dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1335, in _step_coupled\n    self._step_proxy(state_in, control, contacts, dt, iteration_restart=k > 0)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1526, in _step_proxy\n    dst_contacts_used = self._step_entry(\n                        ^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2681, in _step_entry\n    entry.solver.step(entry.state_0, entry.state_0, control, contacts, substep_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 1928, in step\n    self._step_impl(state_in, state_out, dt, pic, scratch)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 2934, in _step_impl\n    rigidity_operator = self._build_collider_rigidity_operator(state_in, scratch, cell_volume)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 3120, in _build_collider_rigidity_operator\n    rigidity_operator = build_rigidity_operator(\n                        ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/rasterized_collisions.py\", line 868, in build_rigidity_operator\n    IJtm = wps.bsr_from_triplets(\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1574, in bsr_from_triplets\n    bsr_set_from_triplets(A, rows, columns, values, prune_numerical_zeros=prune_numerical_zeros)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1451, in bsr_set_from_triplets\n    _bsr_ensure_fits(dest, nnz=nnz)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 767, in _bsr_ensure_fits\n    bsr.values = wp.empty(\n                 ^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 9869, in empty\n    arr = warp.array(\n          ^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3418, in __init__\n    self._init_new(dtype, shape, strides, device, pinned)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3901, in _init_new\n    ptr = allocator.allocate(capacity)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 5046, in allocate\n    raise RuntimeError(f\"Failed to allocate {size_in_bytes} bytes on device '{self.device}'\")\nRuntimeError: Failed to allocate 1679546880 bytes on device 'cuda:0'\n",
+      "Traceback (most recent call last):\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 302, in worker\n    advance()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py\", line 297, in advance\n    scene.simulate()\n  File \"/home/jkamohara/isaac/newton/newton/examples/mpm_moving_patch_alpha/impl/base_example.py\", line 194, in simulate\n    self.solver.step(self.state_0, self.state_0, self.control, self.contacts, self.sim_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2219, in step\n    self._step_coupled(state_in, state_out, control, contacts, dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1335, in _step_coupled\n    self._step_proxy(state_in, control, contacts, dt, iteration_restart=k > 0)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled_proxy.py\", line 1526, in _step_proxy\n    dst_contacts_used = self._step_entry(\n                        ^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/coupled/solver_coupled.py\", line 2681, in _step_entry\n    entry.solver.step(entry.state_0, entry.state_0, control, contacts, substep_dt)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 1928, in step\n    self._step_impl(state_in, state_out, dt, pic, scratch)\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 2934, in _step_impl\n    rigidity_operator = self._build_collider_rigidity_operator(state_in, scratch, cell_volume)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py\", line 3120, in _build_collider_rigidity_operator\n    rigidity_operator = build_rigidity_operator(\n                        ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/rasterized_collisions.py\", line 868, in build_rigidity_operator\n    IJtm = wps.bsr_from_triplets(\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1574, in bsr_from_triplets\n    bsr_set_from_triplets(A, rows, columns, values, prune_numerical_zeros=prune_numerical_zeros)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 1451, in bsr_set_from_triplets\n    _bsr_ensure_fits(dest, nnz=nnz)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/sparse.py\", line 767, in _bsr_ensure_fits\n    bsr.values = wp.empty(\n                 ^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 9869, in empty\n    arr = warp.array(\n          ^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3418, in __init__\n    self._init_new(dtype, shape, strides, device, pinned)\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/types.py\", line 3901, in _init_new\n    ptr = allocator.allocate(capacity)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jkamohara/isaac/newton/.venv/lib/python3.12/site-packages/warp/_src/context.py\", line 5046, in allocate\n    raise RuntimeError(f\"Failed to allocate {size_in_bytes} bytes on device '{self.device}'\")\nRuntimeError: Failed to allocate 1679546880 bytes on device 'cuda:0'\n"
+    ]
+  }
+]

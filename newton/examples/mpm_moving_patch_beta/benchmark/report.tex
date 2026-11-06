@@ -1,0 +1,122 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Newton \textbar\ Moving terrain benchmark}
+\fancyhead[R]{Box, rover, and G1}
+\fancyfoot[C]{\thepage}
+\setlength{\headheight}{13pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\title{Moving Terrain MPM: Computation and Memory Scaling}
+\author{Newton simulation benchmark}
+\date{September 23, 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Motivation}
+Simulating all the sand in a large environment increases both particle storage and the work of each physics step. We evaluate whether a fixed-size moving patch can keep this cost bounded while a dynamic object or robot moves through a larger terrain. The benchmark compares fixed MPM grids, sparse MPM grids, and the beta moving-patch implementation in three scenes: a box, a four-wheel rover, and a G1 humanoid. All scenes use two-way rigid-body--MPM coupling. All three methods share the beta scene and coupling loop; the benchmark changes terrain allocation and grid handling.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{00_scenes.pdf}
+\caption{The three example scenes. These existing viewer images identify the simulated objects; benchmark measurements run without rendering, with flat terrain and the common parameters in Table~\ref{tab:setup}.}
+\end{figure}
+
+\section{Methodology}
+\subsection{Methods and terrain sizes}
+\textbf{Fixed} uses the implicit MPM solver's fixed Cartesian grid, initialized around the particles with four voxels of padding. The solver still selects occupied cells for the material solve. \textbf{Sparse} uses a rebuildable sparse grid around particles. Its topology is stored in NanoVDB, a hierarchical voxel data structure, with a positive reserved active-cell capacity. \textbf{Moving-patch} uses the same sparse-grid configuration with \texttt{MovingTerrainMPMWrapper}. It retains particles inside the moving terrain and recycles particles that leave it. The beta height cache stores measured terrain height and reference material volume; it does not preserve full particle stress or deformation state.
+
+For the scaling sweep, the listed terrain side length $L$ ranges from 3 to 10\,m in 1\,m increments. Fixed and sparse simulate an $L\times L\times0.5$\,m particle bed. Moving-patch always allocates a $3\times3\times0.5$\,m bed: a $2\times2$\,m area of simulated terrain surrounded by a 0.5\,m boundary on each side. Boundary particles remain active with zero mass, providing kinematic support. Fixed and sparse use the same boundary width at the edges of their full beds.
+
+The background height map and supporting ground span $(L+2)\times(L+2)$\,m in every method. This adds travel margin around the particle bed, including the 3\,m case. The plotted $L$ describes the full particle bed for fixed and sparse, not the background map. Moving-patch background storage therefore grows with $L$, even though its MPM particle and grid allocation stays fixed. Height-update working arrays also keep the local patch dimensions.
+
+For the overhead comparison, all three methods allocate identical particle beds with side lengths 1, 2, and 4\,m and depth 0.5\,m. Boundary width is 0.1\,m on each side for every method in this comparison, so the 1\,m case still has a nonzero area of simulated terrain. These cases isolate the practical cost of maintaining a moving patch at matched initial particle counts; subsequent particle positions and solver workloads can differ. The smallest bed places robot contacts close to the fixed terrain edge, so the 2\,m case is the main overhead reference.
+
+\begin{table}[htbp]
+\centering
+\caption{Common benchmark settings.}\label{tab:setup}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+GPU & NVIDIA GeForce RTX 5090, approximately 32\,GiB \\
+CPU & Intel Core Ultra 9 285K \\
+Host memory visible to the OS & Approximately 62\,GiB \\
+MPM voxel size & 0.05\,m \\
+Particle sampling & 3 per axis per voxel; 27 per voxel \\
+Particle spacing; jitter distance & $0.05/3$\,m; $0.05/3$\,m \\
+Sand depth; density & 0.5\,m; 2500\,kg/m$^3$ \\
+Young's modulus; Poisson ratio & 40\,MPa; 0.3 \\
+Sand friction coefficient & $\tan(50^\circ)$ \\
+Transfer; velocity/strain/collider bases & PIC; Q1 / P0 / S2 \\
+Maximum MPM iterations; warm start & 50; automatic \\
+Physics timestep & 0.005\,s (200\,Hz) \\
+Controller frame rate; physics substeps & 50\,Hz; 4 \\
+MuJoCo substeps per physics step & 4 \\
+Proxy coupling passes; mass scale & 1; 1 \\
+Commanded forward speed & 0.2\,m/s \\
+Warm-up; measured steps per run & 150; 150 \\
+Independent attempts per case & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both sparse methods reserve at least 65,536 active cells. For a particle bed of width $W$, the capacity is
+\[
+ C=\max\left(65{,}536,\;22\left\lceil W/0.05+8\right\rceil^2\right).
+\]
+NanoVDB node capacities use the solver defaults. This tests the current conservative capacity policy, not a tuned minimum-memory sparse configuration or dynamic allocation with capacity $-1$. The same capacity rule is passed to fixed grids, although fixed-grid allocation follows its Cartesian bounds. Raw results record particle count, active-cell count, and capacity for each case.
+
+\subsection{Motion, timing, and memory}
+The box starts with its center at 0.8\,m, placing its bottom 0.05\,m above the sand, and follows a forward reference through a force controller. The rover uses differential-drive wheel commands. G1 runs its actuated policy at 50\,Hz with a forward velocity command. Bodies remain dynamic; prescribed commands do not overwrite their poses. The scenes use the same sampling and material settings, rather than their different interactive material presets.
+
+Each case runs in a fresh process. We exclude initialization and 150 warm-up steps, then measure 150 individual physics steps with GPU synchronization after each step. Timing includes the scene controller, collision handling, two-way coupling, MPM solve, and moving-patch updates. G1 timing also includes policy inference when scheduled. Rendering, display compaction, and frame capture are excluded, and no outer CUDA graph is captured. Each run covers 1.5\,s of simulated time, of which the last 0.75\,s is measured. It measures a local forward segment, not traversal of the entire terrain.
+
+Plots show the mean and sample standard deviation of successful measured steps pooled across the two attempted independent runs. Standard deviation describes step-time variation, not uncertainty in the estimated mean. Repeat order is reversed for the second sweep to reduce systematic ordering effects. Repeated runs, poses, particle recycling counts, and finite-state checks are retained in the raw data.
+
+GPU memory is sampled through NVML at 20\,Hz, subtracting device usage before each process initializes CUDA. Plots show the mean and standard deviation of samples taken from the first measured step through the final state checks. The separately recorded sampled peak includes initialization. This measures the application's total GPU footprint, including solver storage, the CUDA context, robot assets, and G1 policy storage; it is not an isolated measurement of MPM arrays. GPU allocators may retain storage allocated during setup. Small memory differences can also include changes in desktop GPU usage because the measurement uses device-wide counters.
+
+\section{Performance with fixed/sparse MPM grid}
+\input{grid_results.tex}
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{01_grid_comparison.pdf}
+\caption{Fixed and sparse full-terrain simulations. Points show mean completed physics-step time and mean measured GPU memory; error bars show one sample standard deviation. Rows correspond to box, rover, and G1. Missing points indicate no successful repeat; failures are listed in the results.}
+\end{figure}
+
+\section{Terrain size scaling}
+\input{scaling_results.tex}
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{02_terrain_scaling.pdf}
+\caption{Full-terrain fixed and sparse methods compared with a fixed-size moving patch. Every moving-patch point is measured independently with its corresponding background map. The MPM particle count stays fixed for moving-patch; background map and ground storage grow with the listed terrain size.}
+\end{figure}
+
+\section{Moving patch compute/memory overhead}
+\input{overhead_results.tex}
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{03_equal_size_comparison.pdf}
+\caption{Matched initial particle allocations. All methods use the same 0.1\,m boundary width. Differences include moving-patch maintenance, terrain-history storage, and the resulting differences in the subsequent simulation workload. Error bars show one sample standard deviation.}
+\end{figure}
+
+\clearpage
+\section{Scope and reproducibility}
+These measurements evaluate performance with one dynamic object or robot on flat homogeneous terrain. They do not establish long-distance stability, accuracy of restored terrain deformation, standing stability, or scaling to many robots. Equal commands do not guarantee identical trajectories after terrain recycling. Sparse performance also depends on material occupancy and reserved grid capacity; results for these filled rectangular beds should not be generalized to disconnected or highly irregular material distributions.
+
+The moving patch bounds local MPM work, but finite background storage remains proportional to the map area. A larger scene would eventually require a different background-storage policy. Measurements therefore support bounded local simulation cost over the tested sizes, rather than unlimited terrain storage at constant memory.
+
+The benchmark directory contains \texttt{run\_benchmarks.py}, \texttt{plot\_results.py}, per-run JSON and logs in \texttt{raw/}, and aggregated \texttt{summary.csv} and \texttt{summary.json}. Hardware, software versions, source and asset hashes, and GPU process activity are stored alongside them. \texttt{README.md} gives the exact run and plot commands. No LaTeX compiler was installed in the measurement environment; this report is supplied as source with vector PDF and PNG figures.
+
+\end{document}

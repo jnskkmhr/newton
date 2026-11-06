@@ -1,0 +1,12 @@
+{
+  "packages": {
+    "warp-lang": "1.17.0",
+    "torch": "2.14.0",
+    "mujoco": "3.12.0",
+    "mujoco-warp": "3.12.0",
+    "numpy": "2.5.0",
+    "matplotlib": "3.11.0"
+  },
+  "git_head": "66d9d50dde76f2d88184682028e6f9a886cb20f5",
+  "working_tree": "pre-existing local modifications; see source_hashes.json"
+}

@@ -1,0 +1,32 @@
+Warp DeprecationWarning: warp.config.quiet is deprecated; use warp.config.log_level = warp.LOG_WARNING to suppress the init banner.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm_improve/profile.py", line 351, in <module>
+    main()
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm_improve/profile.py", line 347, in main
+    run(args)
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm_improve/profile.py", line 190, in run
+    model, solver, state, count = build(args)
+                                  ^^^^^^^^^^^
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm_improve/profile.py", line 177, in build
+    solver = cls(model, cfg, verbose=False, temporary_store=fem.TemporaryStore() if args.temporary_store else None)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py", line 1511, in __init__
+    pic = self._particles_to_cells(model.particle_q)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py", line 2725, in _particles_to_cells
+    grid = self._allocate_grid(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py", line 2551, in _allocate_grid
+    self.check_sparse_grid_rebuild_status()
+  File "/home/jkamohara/isaac/newton/newton/_src/solvers/implicit_mpm/solver_implicit_mpm.py", line 1620, in check_sparse_grid_rebuild_status
+    raise _sparse_grid_rebuild_error(status)
+RuntimeError: Implicit MPM sparse grid rebuild capacity was exceeded for active voxels (status 8). To avoid overflow, increase Config.max_active_cell_count.
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 5090" (31 GiB, sm_120, mempool enabled)
+   Kernel cache:
+     /home/jkamohara/.cache/warp/1.17.0

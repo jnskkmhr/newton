@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "newton/examples/mpm_moving_patch_alpha/benchmark/physics_vram/run_benchmarks.py",
+    "--background-margin",
+    "0",
+    "--report-dir",
+    "newton/examples/mpm_moving_patch_alpha/benchmark/box_2026_09_28/traversal",
+    "--output",
+    "newton/examples/mpm_moving_patch_alpha/benchmark/box_2026_09_28/traversal/raw",
+    "--warmup",
+    "150",
+    "--steps",
+    "1200",
+    "--repeats",
+    "2",
+    "--only",
+    "traversal_box_moving-patch_6"
+  ],
+  "date": "2026-09-28T09:07:27-0700",
+  "python": "3.12.14 (main, Sep  1 2026, 14:16:52) [Clang 22.1.3 ]",
+  "gpu": "name, driver_version, memory.total [MiB]\nNVIDIA GeForce RTX 5090, 595.84, 32607 MiB\n",
+  "warmup": 150,
+  "steps": 1200,
+  "repeats": 2,
+  "background_margin": 0.0
+}
