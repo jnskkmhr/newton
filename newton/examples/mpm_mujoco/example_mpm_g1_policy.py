@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ###########################################################################
-# Example MPM G1 Policy — Box-Throwing MPM Setup
+# Example MPM G1 Policy — Granular Terrain Setup
 #
 # Unitree G1 locomotion with a distillation policy coupled with implicit
-# MPM sand.  MPM material and grid parameters match example_mpm_box_throwing.py
-# (basalt, voxel_size=0.025, fixed grid).
+# MPM terrain. The default material is closely packed poppy seeds with
+# 0.02 m voxels and 1.25 particles per cell along each axis (fixed grid).
 #
 # Ported from example_mpm_g1_distillation_running_decode.py (old newton)
 # to the new newton_dev API.
@@ -26,7 +26,6 @@ import numpy as np
 import torch
 import warp as wp
 import yaml
-from terrain_kernel import sample_sinusoidal_terrain
 
 import newton
 import newton.examples
@@ -34,7 +33,6 @@ from newton import JointTargetMode
 from newton.examples.mpm_mujoco.common.kernel import (
     compute_body_forces,
     subtract_body_force,
-    subtract_body_force_no_inv_mass,
 )
 from newton.examples.mpm_mujoco.common.mpm_material_cfg import MPMMaterialCfg
 from newton.examples.mpm_mujoco.utils import (
@@ -51,6 +49,31 @@ from newton.examples.mpm_mujoco.utils import (
 )
 from newton.solvers import SolverImplicitMPM
 
+# Particle/material settings match the moving-patch configuration.
+MPM_VOXEL_SIZE = 0.02
+MPM_COLLIDER_MARGIN = 0.0
+FOOT_CONTACT_MARGIN = 0.04 * 0.5
+PLATFORM_CONTACT_MARGIN = 0.004
+PLATFORM_CONTACT_GAP = 0.002
+MPM_PARTICLES_PER_CELL = 1.25
+MPM_VISUAL_COLOR = (0.32, 0.24, 0.21)
+
+# Closely packed poppy seeds. Density is bulk bed density [kg/m³].
+# The supplied preset refers to Yang et al. (2020), Table 2.
+# Use Newton particle attributes directly; MPMParticleMaterialCfg is IsaacLab-specific.
+SAND_MATERIAL_CFG = {
+    "density": 682.0,
+    "young_modulus": 1.0e15,
+    "poisson_ratio": 0.3,
+    "friction": 1.07,  # Estimate from tan(47 degrees); requires calibration.
+    "yield_pressure": 1.0e15,
+    "tensile_yield_ratio": 0.0,
+    "yield_stress": 0.0,
+    "hardening": 0.0,
+    "dilatancy": 0.0,
+    "viscosity": 0.0,
+}
+
 # --------------------------------------------------------------------------- #
 # Environment
 # --------------------------------------------------------------------------- #
@@ -66,7 +89,7 @@ class NewtonEnv:
         video: bool = False,
         device: str = "cuda:0",
         episode_length_s: float = 10.0,
-        sand_type: str = "sand",
+        sand_type: str = "poppy",
     ):
         self.config = config
         self.num_envs = 1
@@ -85,24 +108,19 @@ class NewtonEnv:
         define material parameters
         """
         if sand_type == "poppy":
-            # poppy seed
-            packing_density = 0.6
             self.mpm_material_cfg = MPMMaterialCfg(
-                bulk_density=1100.0 * packing_density,  # 1000-1100 for poppy seed
-                friction_angle=30.0,  # spawn poppy seed and stops flowing, measure angle.
-                youngs_modulus=15.0e6,  # 15-20 MPa is reasonable range
-                poissons_ratio=0.3,
+                bulk_density=SAND_MATERIAL_CFG["density"],
+                friction_angle=math.degrees(math.atan(SAND_MATERIAL_CFG["friction"])),
+                youngs_modulus=SAND_MATERIAL_CFG["young_modulus"],
+                poissons_ratio=SAND_MATERIAL_CFG["poisson_ratio"],
                 critical_fraction=0.5,
-                particles_per_cell=3.0,
-                voxel_size=0.025,
-                voxel_size_vis=0.06,
+                particles_per_cell=MPM_PARTICLES_PER_CELL,
+                voxel_size=MPM_VOXEL_SIZE,
+                voxel_size_vis=MPM_VOXEL_SIZE,
                 transfer_scheme="apic",
                 collider_basis="S2",
                 collider_velocity_mode="forward",
-                # transfer_scheme="pic",
-                # collider_basis="pic27",
-                # collider_velocity_mode="finite_difference",
-                particle_color=(0.32, 0.24, 0.21),
+                particle_color=MPM_VISUAL_COLOR,
             )
         elif sand_type == "sand":
             # dry sand
@@ -146,6 +164,12 @@ class NewtonEnv:
             )
         else:
             raise ValueError(f"Unknown sand type: {sand_type}")
+
+        self.particle_material_attributes = (
+            {f"mpm:{name}": value for name, value in SAND_MATERIAL_CFG.items() if name != "density"}
+            if sand_type == "poppy"
+            else {"mpm:friction": math.tan(math.radians(self.mpm_material_cfg.friction_angle))}
+        )
 
         """
         setup rigid body builder
@@ -204,8 +228,19 @@ class NewtonEnv:
         # foot mass up to prevent under-coupling (same approach as G1 reference).
         # G1: total=32.34 kg, foot=0.608 kg, 2 feet support → 32.34/(2*0.608) ≈ 26.6
         coupling_relaxation = config.get("coupling_relaxation", 26.6)
+        # One MPM collider per body (including the static body -1).
+        # Override MPM margins without changing rigid foot/platform contacts.
+        collider_body_ids = sorted(
+            {
+                body
+                for body, flags in zip(builder.shape_body, builder.shape_flags, strict=True)
+                if flags & newton.ShapeFlags.COLLIDE_PARTICLES
+            }
+        )
         self.mpm_solver.setup_collider(
             model=self.model,
+            collider_body_ids=collider_body_ids,
+            collider_margins=[MPM_COLLIDER_MARGIN] * len(collider_body_ids),
             body_mass=self.model.body_mass * coupling_relaxation,
             body_inv_inertia=self.model.body_inv_inertia / coupling_relaxation,
         )
@@ -227,7 +262,7 @@ class NewtonEnv:
             iterations=100,
             ls_iterations=50,
             use_mujoco_contacts=True,
-            )
+        )
 
         """
         prepare simulation states
@@ -372,6 +407,11 @@ class NewtonEnv:
             builder.joint_armature[i + 6] = self.config["mjw_joint_armature"][i]
             builder.joint_target_mode[i + 6] = int(JointTargetMode.POSITION)
 
+        for body, label in enumerate(builder.body_label):
+            if "ankle" in label or "foot" in label:
+                for shape in builder.body_shapes[body]:
+                    builder.shape_margin[shape] = FOOT_CONTACT_MARGIN
+
         # Only foot/ankle bodies collide with sand particles
         for body in range(builder.body_count):
             if "ankle" not in builder.body_label[body] and "knee" not in builder.body_label[body]:
@@ -388,11 +428,12 @@ class NewtonEnv:
     def add_scene(self, builder: newton.ModelBuilder):
         # Flat platform before the sand bed and a landing box after it
         color = (0.3, 0.3, 0.3)
-        sand_bed_lo = (-1.2, 0.0, 0.0)
-        sand_bed_hi = (1.2, 3.0, 0.2)
-        bed_thickness = 0.5
+        platform_cfg = builder.default_shape_cfg.copy()
+        platform_cfg.margin = PLATFORM_CONTACT_MARGIN
+        platform_cfg.gap = PLATFORM_CONTACT_GAP
         builder.add_shape_box(
             body=-1,
+            cfg=platform_cfg,
             xform=wp.transform(p=wp.vec3(0.0, -0.5, 0.05), q=wp.quat_identity()),
             color=wp.vec3(*color),
             hx=1.2,
@@ -401,6 +442,7 @@ class NewtonEnv:
         )
         builder.add_shape_box(
             body=-1,
+            cfg=platform_cfg,
             xform=wp.transform(p=wp.vec3(0.0, 4.0, 0.05), q=wp.quat_identity()),
             color=wp.vec3(*color),
             hx=1.2,
@@ -409,6 +451,7 @@ class NewtonEnv:
         )
         builder.add_shape_box(
             body=-1,
+            cfg=platform_cfg,
             xform=wp.transform(p=wp.vec3(1.2 + 0.1, 2.5, 0.05), q=wp.quatf(*(0.0, 0.0, 0.7071068, 0.7071068))),
             color=wp.vec3(*color),
             hx=3.5,
@@ -417,20 +460,18 @@ class NewtonEnv:
         )
         builder.add_shape_box(
             body=-1,
+            cfg=platform_cfg,
             xform=wp.transform(p=wp.vec3(-1.2 - 0.1, 2.5, 0.05), q=wp.quatf(*(0.0, 0.0, 0.7071068, 0.7071068))),
             color=wp.vec3(*color),
             hx=3.5,
             hy=0.1,
             hz=0.1,
         )
-        builder.add_ground_plane()
+        builder.add_ground_plane(cfg=platform_cfg)
 
     def add_sand(self, sand_builder: newton.ModelBuilder, voxel_size: float = 0.04):
         """Sand bed matching example_mpm_box_throwing.py dimensions."""
         bulk_density = self.mpm_material_cfg.bulk_density
-        youngs_modulus = self.mpm_material_cfg.youngs_modulus
-        poissons_ratio = self.mpm_material_cfg.poissons_ratio
-        friction = math.tan(math.radians(self.mpm_material_cfg.friction_angle))
         particles_per_cell = self.mpm_material_cfg.particles_per_cell
 
         # bed dimensions from example_mpm_box_throwing.py
@@ -456,11 +497,7 @@ class NewtonEnv:
             mass=mass,
             jitter=2.0 * radius,
             radius_mean=radius,
-            custom_attributes={
-                # "mpm:young_modulus": youngs_modulus,
-                # "mpm:poisson_ratio": poissons_ratio,
-                "mpm:friction": friction,
-            },
+            custom_attributes=self.particle_material_attributes,
         )
 
     def create_obs_buffer(self):
@@ -718,9 +755,13 @@ class NewtonEnv:
             if out_of_bounds_y.any():
                 reasons.append(f"out_of_bounds_y (y={root_pos_w[:, 1].item():.2f} > {bound_y})")
             if roll_violation.any():
-                reasons.append(f"roll_violation (|roll|={torch.abs(root_euler_w[:, 0]).item():.2f} > {torch.pi/4:.2f})")
+                reasons.append(
+                    f"roll_violation (|roll|={torch.abs(root_euler_w[:, 0]).item():.2f} > {torch.pi / 4:.2f})"
+                )
             if pitch_violation.any():
-                reasons.append(f"pitch_violation (|pitch|={torch.abs(root_euler_w[:, 1]).item():.2f} > {torch.pi/4:.2f})")
+                reasons.append(
+                    f"pitch_violation (|pitch|={torch.abs(root_euler_w[:, 1]).item():.2f} > {torch.pi / 4:.2f})"
+                )
             print(f"[INFO] Termination type: {' | '.join(reasons)}")
         if time_out.any():
             print(f"[INFO] Termination type: time_out ({self.episode_length_buf.item()}/{self.max_episode_length})")
@@ -887,7 +928,7 @@ class NewtonEnv:
         base, scaled by velocity magnitude.
         """
         arrow_z_offset = 0.5  # place arrows above the base [m]
-        arrow_scale = 0.4 # world-space length per (m/s)
+        arrow_scale = 0.4  # world-space length per (m/s)
 
         joint_q = self.state_0.joint_q.numpy() if self.state_0.joint_q is not None else np.zeros(7)
         joint_qd = self.state_0.joint_qd.numpy() if self.state_0.joint_qd is not None else np.zeros(6)
@@ -932,7 +973,7 @@ if __name__ == "__main__":
     parser.add_argument("--tag", type=str, default="sand", help="Tag for the log directory.")
     parser.add_argument("--episode-length-s", type=float, default=6.0, help="Episode length in seconds.")
     parser.add_argument(
-        "--sand_type", type=str, default="sand", choices=["basalt", "sand", "poppy"], help="Type of sand to simulate."
+        "--sand_type", type=str, default="poppy", choices=["basalt", "sand", "poppy"], help="Type of sand to simulate."
     )
 
     viewer, args = newton.examples.init(parser)
