@@ -4,7 +4,7 @@
 ###########################################################################
 # Example MPM G1 Policy — Granular Terrain Setup
 #
-# Unitree G1 locomotion with a distillation policy coupled with implicit
+# Unitree G1 locomotion with W&B policy jqur5jhm coupled with implicit
 # MPM terrain. The default material is closely packed poppy seeds with
 # 0.02 m voxels and 1.25 particles per cell along each axis (sparse grid).
 #
@@ -12,15 +12,15 @@
 # to the new newton_dev API.
 #
 # Command:
-#   python newton/examples/mpm/example_mpm_g1_box_throwing_policy.py \
-#       --policy models/policy.pt --decoder models/decoder.pt \
-#       --config misc/g1_config.yaml --max-trial 3 --video
+#   uv run python newton/examples/mpm_mujoco/example_mpm_g1_policy.py \
+#       --viewer rtx --sand-type poppy --max-trial 3
 ###########################################################################
 
 from __future__ import annotations
 
 import math
 import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -342,6 +342,8 @@ class NewtonEnv:
             wz_range=self.config.get("wz_range", (0.0, 0.0)),
         )
         self.velocity_generator.sample(root_quat_w)
+        self.velocity_command[:, :3] = self.velocity_generator.vel_command
+        self.velocity_command[:, 3:] = self.velocity_generator.heading_command
 
         # ------------------------------------------------------------------ #
         # Video
@@ -402,6 +404,14 @@ class NewtonEnv:
                 ignore_inertial_definitions=False,
             )
 
+        imported_joints = [
+            name.rsplit("/", 1)[-1]
+            for name, joint_type in zip(builder.joint_label, builder.joint_type, strict=True)
+            if joint_type == newton.JointType.REVOLUTE
+        ]
+        if imported_joints != self.config["mjw_joint_names"]:
+            raise ValueError("Imported joint order does not match the trained policy's mjw_joint_names.")
+
         builder.joint_q[:3] = self.config.get("mjw_init_pos", [0.0, -0.5, 0.95])
         builder.joint_q[3:7] = self.config.get("mjw_init_quat", [0.0, 0.0, 0.0, 1.0])
         builder.joint_q[7:] = self.config["mjw_joint_pos"]
@@ -416,6 +426,8 @@ class NewtonEnv:
             builder.joint_target_kd[i + 6] = self.config["mjw_joint_damping"][i]
             builder.joint_armature[i + 6] = self.config["mjw_joint_armature"][i]
             builder.joint_target_mode[i + 6] = int(JointTargetMode.POSITION)
+            if "mjw_joint_effort_limit" in self.config:
+                builder.joint_effort_limit[i + 6] = self.config["mjw_joint_effort_limit"][i]
 
         for body, label in enumerate(builder.body_label):
             if "ankle" in label or "foot" in label:
@@ -534,7 +546,6 @@ class NewtonEnv:
         self.group_obs_term_history_buffer = {
             "base_ang_vel": CircularBuffer(self.history_length, self.num_envs, self.device),
             "projected_gravity": CircularBuffer(self.history_length, self.num_envs, self.device),
-            "velocity_command": CircularBuffer(self.history_length, self.num_envs, self.device),
             "joint_pos": CircularBuffer(self.history_length, self.num_envs, self.device),
             "joint_vel": CircularBuffer(self.history_length, self.num_envs, self.device),
             "last_actions": CircularBuffer(self.history_length, self.num_envs, self.device),
@@ -542,12 +553,11 @@ class NewtonEnv:
         obs_dim = self.history_length * (
             +self.base_ang_vel.shape[1]
             + self.projected_gravity.shape[1]
-            + self.velocity_command.shape[1]
             + self.joint_pos.shape[1]
             + self.joint_vel.shape[1]
             + self.last_actions.shape[1]
         )
-        self.obs = torch.zeros(1, obs_dim, device=self.device, dtype=torch.float32)
+        self.obs = torch.zeros(self.num_envs, obs_dim + 7, device=self.device, dtype=torch.float32)
 
     def create_time_buffer(self):
         self.sim_time = 0.0
@@ -560,7 +570,11 @@ class NewtonEnv:
     def load_policy_and_setup_tensors(self):
         """Load policy and setup initial tensors for robot control."""
         print("[INFO] Loading policy from:", self.config["policy_path"])
-        self.policy = torch.jit.load(self.config["policy_path"], map_location=self.device)
+        self.policy = torch.jit.load(self.config["policy_path"], map_location=self.device).eval()
+        with torch.inference_mode():
+            action = self.policy(self.obs)
+        if action.shape != (self.num_envs, self.config["num_dofs"]):
+            raise ValueError(f"Policy returned {tuple(action.shape)}; expected 29 joint actions per robot.")
 
         # Handle potential None state
         joint_q = self.state_0.joint_q if self.state_0.joint_q is not None else []
@@ -651,22 +665,28 @@ class NewtonEnv:
         self.group_obs_term_history_buffer["projected_gravity"].append(
             self.projected_gravity * self.config.get("projected_gravity_scale", 1.0)
         )
-        self.group_obs_term_history_buffer["velocity_command"].append(
-            self.velocity_command * self.config.get("command_scale", 1.0)
-        )
         self.group_obs_term_history_buffer["joint_pos"].append(self.joint_pos * self.config.get("joint_pos_scale", 1.0))
         self.group_obs_term_history_buffer["joint_vel"].append(self.joint_vel * self.config.get("joint_vel_scale", 1.0))
         self.group_obs_term_history_buffer["last_actions"].append(
             self.last_actions * self.config.get("last_action_scale", 1.0)
         )
         self.obs[:, :] = torch.cat(
-            [group_obs.buffer.reshape(1, -1) for group_obs in self.group_obs_term_history_buffer.values()], dim=1
+            [group_obs.buffer.reshape(self.num_envs, -1) for group_obs in self.group_obs_term_history_buffer.values()]
+            + [self._current_policy_command()],
+            dim=1,
         )
 
         return self.obs
 
+    def _current_policy_command(self):
+        """Return the current velocity and XYZW heading; commands have no history."""
+        # The local command generator uses WXYZ; this IsaacLab policy uses XYZW.
+        return self.velocity_command[:, [0, 1, 2, 4, 5, 6, 3]]
+
     def _pre_physics_step(self):
-        with torch.no_grad():
+        # update_command() ran just before inference: use it immediately, not one frame later.
+        self.obs[:, -7:] = self._current_policy_command()
+        with torch.inference_mode():
             self.act = self.policy(self.obs)
             self.rearranged_act = torch.index_select(self.act, 1, self.mjc_to_physx_indices)
             a = self.joint_pos_initial + self.config["action_scale"] * self.rearranged_act
@@ -844,6 +864,8 @@ class NewtonEnv:
             :, [3, 0, 1, 2]
         ]
         self.velocity_generator.sample(root_quat_wxyz)
+        self.velocity_command[:, :3] = self.velocity_generator.vel_command
+        self.velocity_command[:, 3:] = self.velocity_generator.heading_command
 
         # Episode tracking reset
         self.episode_length_buf[:] = 0
@@ -1006,6 +1028,13 @@ class NewtonEnv:
 
 if __name__ == "__main__":
     parser = newton.examples.create_parser()
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path(__file__).parent / "config" / "g1_jqur5jhm.yaml",
+        help="Robot and observation configuration; policy_path is relative to this file.",
+    )
+    parser.add_argument("--policy", type=Path, help="Override the exported TorchScript policy path.")
     parser.add_argument("--video", action="store_true", help="Save video of the simulation.")
     parser.add_argument("--video-speed", type=float, default=1.0, help="Speed multiplier for the saved video.")
     parser.add_argument("--log", action="store_true", help="Log state data to disk.")
@@ -1031,7 +1060,7 @@ if __name__ == "__main__":
 
     asset_dir = str(download_git_folder("https://github.com/jnskkmhr/newton-assets.git", "unitree_g1", ref="main"))
 
-    yaml_file_path = "config/g1.yaml"
+    yaml_file_path = args.config
     try:
         with open(yaml_file_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -1042,7 +1071,13 @@ if __name__ == "__main__":
         print(f"[ERROR] Error parsing YAML file: {e}")
         exit(1)
 
-    asset_path = newton.utils.download_asset("unitree_g1")
+    policy_path = args.policy if args.policy is not None else args.config.parent / config["policy_path"]
+    if not policy_path.is_file():
+        raise FileNotFoundError(
+            f"Policy not found: {policy_path}. Export it first with: "
+            "uv run --with wandb python -m newton.examples.mpm_mujoco.utils.export_policy"
+        )
+    config["policy_path"] = str(policy_path.resolve())
     config["asset_path"] = os.path.join(asset_dir, config["asset_path"])
 
     # Joint-order mapping between MuJoCo-warp and PhysX conventions
