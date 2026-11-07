@@ -80,9 +80,17 @@ MATERIAL_PRESETS = {
     "poppy": {**_COMMON_MATERIAL, "density": 682.0, "friction": 1.07},
 }
 
-# The 2 cm bed needs more cells than the previous 131,072-cell allocation.
-# Keep a bounded allocation so the sparse grid can rebuild during graph replay.
-MPM_MAX_ACTIVE_CELL_COUNT = 1 << 19
+# Flat testbed dimensions match IsaacLab's G1MPMSceneCfg [m].
+SAND_BED_LOWER = (-2.0, -1.0, -0.3)
+SAND_BED_UPPER = (2.0, 1.0, 0.0)
+BED_WALL_THICKNESS = 0.1
+BED_WALL_HEIGHT = 0.2
+BED_FLOOR_THICKNESS = 0.1
+APPROACH_LENGTH = 3.1
+APPROACH_THICKNESS = 0.5
+APPROACH_SURFACE_OFFSET = -0.05
+MPM_PARTICLE_JITTER = 0.05
+WORKSPACE_MARGIN = 0.3
 RIGID_SUBSTEPS = 2
 
 # --------------------------------------------------------------------------- #
@@ -99,10 +107,11 @@ class NewtonEnv:
         physx_to_mjc: list[int],
         video: bool = False,
         device: str = "cuda:0",
-        episode_length_s: float = 10.0,
+        episode_length_s: float = 13.0,
         sand_type: str = "poppy",
     ):
-        self.config = config
+        self.config = dict(config)
+        self.configure_testbed()
         self.num_envs = 1
         self.device = device
 
@@ -182,7 +191,10 @@ class NewtonEnv:
         mpm_options.voxel_size = MPM_VOXEL_SIZE
         mpm_options.grid_type = "sparse"
         mpm_options.grid_padding = 0
-        mpm_options.max_active_cell_count = MPM_MAX_ACTIVE_CELL_COUNT
+        mpm_options.max_active_cell_count = max(self.sand_model.particle_count, 1 << 13)
+        mpm_options.max_leaf_node_count = 1 << 13
+        mpm_options.max_lower_node_count = 1 << 10
+        mpm_options.max_upper_node_count = 1 << 5
         mpm_options.strain_basis = "P0"
         mpm_options.transfer_scheme = "apic"
         mpm_options.max_iterations = 25
@@ -341,6 +353,26 @@ class NewtonEnv:
     initializations
     """
 
+    def configure_testbed(self):
+        """Place the flat bed and approach in IsaacLab's +X walking coordinates."""
+        self.bed_lower = np.array(SAND_BED_LOWER)
+        self.bed_upper = np.array(SAND_BED_UPPER)
+        width = self.bed_upper[1] - self.bed_lower[1]
+        self.approach_top = self.bed_upper[2] + APPROACH_SURFACE_OFFSET
+        self.approach_size = (APPROACH_LENGTH, width + 2 * BED_WALL_THICKNESS, APPROACH_THICKNESS)
+        self.approach_position = (
+            self.bed_lower[0] - APPROACH_LENGTH / 2,
+            0.0,
+            self.approach_top - APPROACH_THICKNESS / 2,
+        )
+        # The policy/joint settings still come from YAML; scene geometry determines the root pose.
+        self.config["mjw_init_pos"] = [
+            self.bed_lower[0] - (APPROACH_LENGTH - BED_WALL_THICKNESS) / 2,
+            0.0,
+            self.approach_top + 0.76,
+        ]
+        self.config["mjw_init_quat"] = [0.0, 0.0, 0.0, 1.0]
+
     def add_robot(self, builder: newton.ModelBuilder):
         asset_path = self.config["asset_path"]
         if asset_path.endswith(".usd"):
@@ -389,6 +421,7 @@ class NewtonEnv:
             if "ankle" in label or "foot" in label:
                 for shape in builder.body_shapes[body]:
                     builder.shape_margin[shape] = FOOT_CONTACT_MARGIN
+                    builder.shape_gap[shape] = 0.0
 
         # Only foot/ankle bodies collide with sand particles
         for body in range(builder.body_count):
@@ -404,76 +437,86 @@ class NewtonEnv:
         ]
 
     def add_scene(self, builder: newton.ModelBuilder):
-        # Flat platform before the sand bed and a landing box after it
-        color = (0.3, 0.3, 0.3)
-        platform_cfg = builder.default_shape_cfg.copy()
-        platform_cfg.margin = PLATFORM_CONTACT_MARGIN
-        platform_cfg.gap = PLATFORM_CONTACT_GAP
-        builder.add_shape_box(
-            body=-1,
-            cfg=platform_cfg,
-            xform=wp.transform(p=wp.vec3(0.0, -0.5, 0.05), q=wp.quat_identity()),
-            color=wp.vec3(*color),
-            hx=1.2,
-            hy=0.5,
-            hz=0.1,
-        )
-        builder.add_shape_box(
-            body=-1,
-            cfg=platform_cfg,
-            xform=wp.transform(p=wp.vec3(0.0, 4.0, 0.05), q=wp.quat_identity()),
-            color=wp.vec3(*color),
-            hx=1.2,
-            hy=1.0,
-            hz=0.1,
-        )
-        builder.add_shape_box(
-            body=-1,
-            cfg=platform_cfg,
-            xform=wp.transform(p=wp.vec3(1.2 + 0.1, 2.5, 0.05), q=wp.quatf(*(0.0, 0.0, 0.7071068, 0.7071068))),
-            color=wp.vec3(*color),
-            hx=3.5,
-            hy=0.1,
-            hz=0.1,
-        )
-        builder.add_shape_box(
-            body=-1,
-            cfg=platform_cfg,
-            xform=wp.transform(p=wp.vec3(-1.2 - 0.1, 2.5, 0.05), q=wp.quatf(*(0.0, 0.0, 0.7071068, 0.7071068))),
-            color=wp.vec3(*color),
-            hx=3.5,
-            hy=0.1,
-            hz=0.1,
-        )
-        builder.add_ground_plane(cfg=platform_cfg)
+        """Create the approach, floor, and retaining walls of the IsaacLab flat bed."""
+        length, width, _depth = self.bed_upper - self.bed_lower
+        wall = BED_WALL_THICKNESS
+        floor = BED_FLOOR_THICKNESS
+        wall_z = self.bed_lower[2] + BED_WALL_HEIGHT / 2
+        floor_size = (length + 2 * wall, width + 2 * wall, floor)
+        floor_position = (0.0, 0.0, self.bed_lower[2] - floor / 2)
 
-    def add_sand(self, sand_builder: newton.ModelBuilder, voxel_size: float = 0.04):
-        """Sand bed matching example_mpm_box_throwing.py dimensions."""
-        bulk_density = self.mpm_material_cfg.bulk_density
-        particles_per_cell = self.mpm_material_cfg.particles_per_cell
+        rigid_cfg = builder.default_shape_cfg.copy()
+        rigid_cfg.margin = PLATFORM_CONTACT_MARGIN
+        rigid_cfg.gap = PLATFORM_CONTACT_GAP
+        rigid_cfg.mu = 0.8
+        rigid_cfg.has_particle_collision = False
+        mpm_cfg = builder.default_shape_cfg.copy()
+        mpm_cfg.margin = MPM_COLLIDER_MARGIN
+        mpm_cfg.gap = 0.0
+        mpm_cfg.mu = 0.8
+        mpm_cfg.has_shape_collision = False
 
-        # bed dimensions from example_mpm_box_throwing.py
-        bed_lo = np.array([-1.2, 0.0, 0.0])
-        bed_hi = np.array([1.2, 3.0, 0.2])
-        bed_res = np.array(np.ceil(particles_per_cell * (bed_hi - bed_lo) / voxel_size), dtype=int)
+        def box(label, size, position, cfg, *, visible):
+            shape_cfg = cfg.copy()
+            shape_cfg.is_visible = visible
+            builder.add_shape_box(
+                body=-1,
+                label=label,
+                cfg=shape_cfg,
+                xform=wp.transform(wp.vec3(*position), wp.quat_identity()),
+                hx=float(size[0] / 2),
+                hy=float(size[1] / 2),
+                hz=float(size[2] / 2),
+                color=(0.35, 0.35, 0.37) if cfg is rigid_cfg else (0.25, 0.25, 0.25),
+            )
 
-        cell_size = (bed_hi - bed_lo) / bed_res
-        cell_volume = np.prod(cell_size)
-        radius = float(np.max(cell_size) * 0.5)
-        mass = float(np.prod(cell_volume) * bulk_density)
+        box("ApproachPlatform", self.approach_size, self.approach_position, rigid_cfg, visible=True)
+        box("RigidBedFloor", floor_size, floor_position, rigid_cfg, visible=False)
+        box("MPMBedFloor", floor_size, floor_position, mpm_cfg, visible=True)
+        box(
+            "MPMBedWallFront",
+            (wall, width + 2 * wall, BED_WALL_HEIGHT),
+            (self.bed_upper[0] + wall / 2, 0.0, wall_z),
+            mpm_cfg,
+            visible=True,
+        )
+        for name, side in (("Left", 1), ("Right", -1)):
+            box(
+                f"MPMBedWall{name}",
+                (length + 2 * wall, wall, BED_WALL_HEIGHT),
+                (0.0, side * (width + wall) / 2, wall_z),
+                mpm_cfg,
+                visible=True,
+            )
+        bank_height = self.approach_top - self.bed_lower[2] + floor
+        box(
+            "MPMApproachBank",
+            (APPROACH_LENGTH, width + 2 * wall, bank_height),
+            (self.approach_position[0], 0.0, self.approach_top - bank_height / 2),
+            mpm_cfg,
+            visible=False,
+        )
 
+    def add_sand(self, sand_builder: newton.ModelBuilder, voxel_size: float = MPM_VOXEL_SIZE):
+        """Match IsaacLab's cell-center placement, mass, radius, and jitter."""
+        extent = self.bed_upper - self.bed_lower
+        bed_res = np.maximum(np.ceil(self.mpm_material_cfg.particles_per_cell * extent / voxel_size), 1).astype(int)
+        cell_size = extent / bed_res
+        cell_volume = float(np.prod(cell_size))
+        radius = 0.5 * float(np.cbrt(cell_volume))
+        mass = cell_volume * self.mpm_material_cfg.bulk_density
         sand_builder.add_particle_grid(
-            pos=wp.vec3(bed_lo),
+            pos=wp.vec3(self.bed_lower + cell_size / 2),
             rot=wp.quat_identity(),
             vel=wp.vec3(0.0),
-            dim_x=bed_res[0] + 1,
-            dim_y=bed_res[1] + 1,
-            dim_z=bed_res[2] + 1,
+            dim_x=int(bed_res[0]),
+            dim_y=int(bed_res[1]),
+            dim_z=int(bed_res[2]),
             cell_x=cell_size[0],
             cell_y=cell_size[1],
             cell_z=cell_size[2],
             mass=mass,
-            jitter=2.0 * radius,
+            jitter=MPM_PARTICLE_JITTER,
             radius_mean=radius,
             custom_attributes=self.particle_material_attributes,
         )
@@ -723,10 +766,12 @@ class NewtonEnv:
         root_euler_w = quat_to_euler(root_quat_w)
 
         time_out = self.episode_length_buf >= self.max_episode_length
-        bound_x = 3.0
-        bound_y = 3.0
-        out_of_bounds_x = torch.abs(root_pos_w[:, 0]) > bound_x
-        out_of_bounds_y = root_pos_w[:, 1] > bound_y
+        lower_x = self.bed_lower[0] - APPROACH_LENGTH + WORKSPACE_MARGIN
+        upper_x = self.bed_upper[0] - WORKSPACE_MARGIN
+        lower_y = self.bed_lower[1] + WORKSPACE_MARGIN
+        upper_y = self.bed_upper[1] - WORKSPACE_MARGIN
+        out_of_bounds_x = (root_pos_w[:, 0] < lower_x) | (root_pos_w[:, 0] > upper_x)
+        out_of_bounds_y = (root_pos_w[:, 1] < lower_y) | (root_pos_w[:, 1] > upper_y)
         roll_violation = torch.abs(root_euler_w[:, 0]) > torch.pi / 4
         pitch_violation = torch.abs(root_euler_w[:, 1]) > torch.pi / 4
         # reset = out_of_bounds_x | out_of_bounds_y | roll_violation | pitch_violation
@@ -736,9 +781,13 @@ class NewtonEnv:
         if reset.any():
             reasons = []
             if out_of_bounds_x.any():
-                reasons.append(f"out_of_bounds_x (|x|={root_pos_w[:, 0].abs().item():.2f} > {bound_x})")
+                reasons.append(
+                    f"out_of_bounds_x (x={root_pos_w[:, 0].item():.2f}, allowed [{lower_x:.2f}, {upper_x:.2f}])"
+                )
             if out_of_bounds_y.any():
-                reasons.append(f"out_of_bounds_y (y={root_pos_w[:, 1].item():.2f} > {bound_y})")
+                reasons.append(
+                    f"out_of_bounds_y (y={root_pos_w[:, 1].item():.2f}, allowed [{lower_y:.2f}, {upper_y:.2f}])"
+                )
             if roll_violation.any():
                 reasons.append(
                     f"roll_violation (|roll|={torch.abs(root_euler_w[:, 0]).item():.2f} > {torch.pi / 4:.2f})"
@@ -810,14 +859,14 @@ class NewtonEnv:
         newton.examples.test_body_state(
             self.model,
             self.state_0,
-            "all bodies are above the ground",
-            lambda q, qd: q[2] > 0.1,
+            "all bodies are above the bed floor",
+            lambda q, qd: q[2] > self.bed_lower[2],
         )
         voxel_size = self.mpm_solver.voxel_size
         newton.examples.test_particle_state(
             self.sand_state_0,
-            "all particles are above the ground",
-            lambda q, qd: q[2] > -voxel_size,
+            "all particles are above the bed floor",
+            lambda q, qd: q[2] > self.bed_lower[2] - voxel_size,
         )
 
     """
@@ -962,7 +1011,7 @@ if __name__ == "__main__":
     parser.add_argument("--log", action="store_true", help="Log state data to disk.")
     parser.add_argument("--max-trial", type=int, default=1, help="Number of episodes to run.")
     parser.add_argument("--tag", type=str, default="sand", help="Tag for the log directory.")
-    parser.add_argument("--episode-length-s", type=float, default=6.0, help="Episode length in seconds.")
+    parser.add_argument("--episode-length-s", type=float, default=13.0, help="Episode length in seconds.")
     parser.add_argument(
         "--sand-type",
         "--sand_type",
