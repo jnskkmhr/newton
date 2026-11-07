@@ -1,105 +1,76 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 The Newton Developers
 # SPDX-License-Identifier: Apache-2.0
 
-###########################################################################
-# Example Rigid-MPM Coupled Solver
-#
-# Rigid boxes driven by MuJoCo or Kamino fall into a granular MPM bed.  The rigid bodies
-# are exposed to MPM as proxy colliders in the same shared model, and MPM
-# grid impulses are harvested back into rigid-body wrenches.
-#
-# Command: python -m newton.examples mujoco_mpm_coupled_solver
-#
-###########################################################################
+"""Run the G1 policy testbed with SolverCoupledProxy two-way coupling.
+
+Terrain, material presets, policy observations, control rates, and rendering
+are shared with example_mpm_g1_policy. Only the coupling implementation differs.
+
+uv run python newton/examples/mpm_mujoco/example_mujoco_mpm_coupled_solver.py --viewer rtx
+"""
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import copy
 
-import numpy as np
 import warp as wp
 from newton.solvers.experimental.coupled import SolverCoupledProxy
 
 import newton
-import newton.examples
-from newton.examples.mpm_moving_patch_alpha.impl.controller.object_controller import ObjectController
-from newton.solvers import SolverImplicitMPM, SolverMuJoCo
+from newton.examples.mpm_mujoco.example_mpm_g1_policy import (
+    MPM_COLLIDER_MARGIN,
+    RIGID_SUBSTEPS,
+    NewtonEnv,
+    main,
+)
+from newton.solvers import SolverImplicitMPM
 
 
-def _capture_frame_graph(model: newton.Model, simulate: Callable[[], None], *, enabled: bool = True):
-    if not enabled:
-        return None
+class Example(NewtonEnv):
+    """Use the shared G1 setup with solver-owned proxy impulse exchange."""
 
-    with wp.ScopedDevice(model.device):
-        with wp.ScopedCapture() as capture:
-            simulate()
-
-    if capture.graph is None:
-        raise RuntimeError(f"Graph capture failed on device {model.device}")
-    return capture.graph
-
-
-def _launch_frame_graph(model: newton.Model, graph) -> bool:
-    if graph is None:
-        return False
-
-    with wp.ScopedDevice(model.device):
-        wp.capture_launch(graph)
-    return True
-
-
-class Example:
-    def __init__(self, viewer, args):
-        self.viewer = viewer
-        self.sim_time = 0.0
-        self.fps = 100
-        self.frame_dt = 1.0 / self.fps
-
-        builder = newton.ModelBuilder()
-        builder.default_shape_cfg.mu = 0.5
-        SolverImplicitMPM.register_custom_attributes(builder)
-
-        rigid_body_start = builder.body_count
-        self._emit_rigid_bodies(builder)
-        rigid_body_end = builder.body_count
-        builder.add_ground_plane()
-
-        voxel_size = 0.05
-        self._emit_particles(builder, voxel_size)
-
+    def setup_physics(self, builder, sand_builder):
+        # Merge particles into the rigid model, retaining their world assignment.
+        # Both builders contain world 0; add_builder otherwise assigns global world -1.
+        builder.add_builder(sand_builder)
+        builder.particle_world[:] = sand_builder.particle_world
         self.model = builder.finalize()
+        self.sand_model = self.model
+        mpm_options = self.create_mpm_options(self.model.particle_count)
 
-        mpm_config = SolverImplicitMPM.Config()
-        mpm_config.voxel_size = voxel_size
-        mpm_config.grid_type = "sparse"
-        mpm_config.grid_padding = 0
-        mpm_config.max_active_cell_count = -1
-        # mpm_config.grid_type = "fixed"
-        # mpm_config.grid_padding = 50
-        # mpm_config.max_active_cell_count = 1 << 16
-        mpm_config.strain_basis = "P0"
-        mpm_config.max_iterations = 50
-        mpm_config.critical_fraction = 0.0
+        rigid_shapes = []
+        mpm_shapes = []
+        proxy_bodies = set()
+        for shape, (body, flags) in enumerate(zip(builder.shape_body, builder.shape_flags, strict=True)):
+            if body >= 0 or flags & newton.ShapeFlags.COLLIDE_SHAPES:
+                rigid_shapes.append(shape)
+            elif flags & newton.ShapeFlags.COLLIDE_PARTICLES:
+                mpm_shapes.append(shape)
+            if body >= 0 and flags & newton.ShapeFlags.COLLIDE_PARTICLES:
+                proxy_bodies.add(body)
 
-        rigid_body_indices = wp.array(
-            list(range(rigid_body_start, rigid_body_end)),
-            dtype=int,
-            device=self.model.device,
-        )
+        def configure_mpm_view(view):
+            # The rigid feet keep their contact margins; MPM uses zero margin.
+            view.shape_margin = wp.full_like(view.shape_margin, MPM_COLLIDER_MARGIN)
+
         self.solver = SolverCoupledProxy(
             model=self.model,
             entries=[
                 SolverCoupledProxy.Entry(
                     name="mujoco",
-                    solver=lambda v: SolverMuJoCo(model=v, use_mujoco_contacts=False, njmax=100),
-                    bodies=[int(i) for i in rigid_body_indices.numpy()],
+                    solver=self.create_rigid_solver,
+                    bodies=list(range(self.model.body_count)),
                     joints=list(range(self.model.joint_count)),
-                    substeps=args.rigid_substeps,
+                    shapes=rigid_shapes,
+                    substeps=RIGID_SUBSTEPS,
                 ),
                 SolverCoupledProxy.Entry(
                     name="mpm",
-                    solver=lambda v: SolverImplicitMPM(model=v, config=mpm_config),
+                    solver=lambda view: SolverImplicitMPM(model=view, config=mpm_options),
                     particles=list(range(self.model.particle_count)),
+                    shapes=mpm_shapes,
+                    configure_view=configure_mpm_view,
+                    substeps=1,
                     in_place=True,
                 ),
             ],
@@ -108,212 +79,50 @@ class Example:
                     SolverCoupledProxy.Proxy(
                         source="mujoco",
                         destination="mpm",
-                        bodies=[int(i) for i in rigid_body_indices.numpy()],
-                        mass_scale=getattr(args, "mass_scale", 1.0),
+                        bodies=sorted(proxy_bodies),
+                        mass_scale=self.config.get("coupling_relaxation", 26.6),
                         mode="lagged",
-                        # MPM handles collider contact internally; no proxy
-                        # collision pipeline should generate Contacts here.
                         collision_pipeline=lambda _model: None,
                     )
                 ],
-                iterations=args.proxy_iterations,
+                iterations=1,
             ),
         )
+        self.rb_solver = self.solver.solver("mujoco")
         self.mpm_solver = self.solver.solver("mpm")
-
         self.state_0 = self.model.state()
+        self.state_1 = self.state_0
+        self.sand_state_0 = self.state_0
+        self.control = self.model.control()
         self.rigid_collision_pipeline = newton.CollisionPipeline(self.model, soft_contact_max=0)
         self.contacts = self.rigid_collision_pipeline.contacts()
-        self.control = self.model.control()
 
-        newton.examples.configure_coupled_view(self, args)
-        if isinstance(self.viewer, newton.viewer.ViewerGL):
-            self.viewer.register_ui_callback(self.render_ui, position="side")
-        self.viewer.show_particles = True
-        self.show_impulses = False
+    def setup_coupling_buffers(self):
+        """Let SolverCoupledProxy allocate and manage all feedback buffers."""
 
-        newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state_0)
-        # Articulated subclasses retain their own policy controllers.
-        self.object_controller = None
-        if all(joint_type == newton.JointType.FREE for joint_type in builder.joint_type):
-            self.object_controller = ObjectController(
-                self.model, self.state_0, list(range(rigid_body_start, rigid_body_end))
-            )
+    def render_model(self):
+        """Draw particles once through the shared material-colored /sand point set."""
+        model = copy.copy(self.model)
+        model.particle_count = 0
+        return model
 
-        self.particle_render_colors = wp.full(
-            self.model.particle_count,
-            value=wp.vec3(0.7, 0.6, 0.4),
-            dtype=wp.vec3,
-            device=self.model.device,
-        )
+    def _apply_action(self):
+        for _ in range(self.sim_substeps):
+            self.state_0.clear_forces()
+            self.viewer.apply_forces(self.state_0)
+            self.rigid_collision_pipeline.collide(self.state_0, self.contacts)
+            self.solver.step(self.state_0, self.state_0, self.control, self.contacts, self.sim_dt)
 
-        self.graph = None
-        # Dynamic sparse allocation (-1) rebuilds volumes outside CUDA capture.
-        if mpm_config.max_active_cell_count > 0 and (
-            mpm_config.grid_type == "fixed" or (mpm_config.grid_type == "sparse" and mpm_config.grid_padding == 0)
-        ):
-            self.capture()
-
-    def capture(self):
-        self.graph = _capture_frame_graph(self.model, self.simulate)
-
-    def simulate(self):
+    def reset_physics(self):
+        """Restore the scene and clear MPM history and proxy feedback together."""
+        wp.copy(self.state_0.joint_q, self._initial_joint_q)
+        wp.copy(self.state_0.joint_qd, self._initial_joint_qd)
+        newton.eval_fk(self.model, self.state_0.joint_q, self.state_0.joint_qd, self.state_0)
+        wp.copy(self.state_0.particle_q, self._initial_sand_q)
+        wp.copy(self.state_0.particle_qd, self._initial_sand_qd)
         self.state_0.clear_forces()
-        if self.object_controller is not None:
-            self.object_controller.apply(self.state_0, self.frame_dt)
-        newton.examples.apply_coupled_viewer_forces(self, self.state_0)
-        self.rigid_collision_pipeline.collide(self.state_0, self.contacts)
-        self.solver.step(self.state_0, self.state_0, self.control, self.contacts, self.frame_dt)
-
-    def step(self):
-        if not _launch_frame_graph(self.model, self.graph):
-            self.simulate()
-        self.sim_time += self.frame_dt
-
-    def test_final(self):
-        newton.examples.test_body_state(
-            self.model,
-            self.state_0,
-            "all bodies are above the sand",
-            lambda q, qd: q[2] > 0.45,
-        )
-        voxel_size = self.mpm_solver.voxel_size
-        newton.examples.test_particle_state(
-            self.state_0,
-            "all particles are above the ground",
-            lambda q, qd: q[2] > -voxel_size,
-        )
-
-    def render(self):
-        render_state = newton.examples.get_coupled_view_state(self)
-        self.viewer.begin_frame(self.sim_time)
-        newton.examples.log_coupled_view(self, self.contacts)
-
-        if render_state.particle_q is not None:
-            self.viewer.log_points(
-                "/sand",
-                points=render_state.particle_q,
-                radii=self.model.particle_radius,
-                colors=self.particle_render_colors,
-                hidden=not self.viewer.show_particles,
-            )
-            # impulses, pos, _cid = self.mpm_solver.collect_collider_impulses(render_state)
-            # self.viewer.log_points(
-            #     "/contact_points",
-            #     points=pos,
-            #     radii=self.model.particle_radius * 0.5,
-            #     colors=wp.full(pos.shape[0], value=wp.vec3(1.0, 0.0, 0.0), dtype=wp.vec3),
-            #     hidden=not self.viewer.show_particles,
-            # )
-
-        if self.show_impulses and render_state.particle_q is not None:
-            impulses, pos, _cid = self.mpm_solver.collect_collider_impulses(render_state)
-            self.viewer.log_lines(
-                "/impulses",
-                starts=pos,
-                ends=pos + impulses,
-                colors=wp.full(pos.shape[0], value=wp.vec3(1.0, 0.0, 0.0), dtype=wp.vec3),
-            )
-        else:
-            self.viewer.log_lines("/impulses", None, None, None)
-
-        self.viewer.end_frame()
-
-    def render_ui(self, imgui):
-        _changed, self.show_impulses = imgui.checkbox("Show Impulses", self.show_impulses)
-
-    def _emit_rigid_bodies(self, builder: newton.ModelBuilder):
-        drop_z = 2.0
-        offsets_xy = [
-            (0.00, 0.00),
-            (0.10, 0.00),
-            (-0.10, 0.00),
-            (0.00, 0.10),
-            (0.00, -0.10),
-            (0.10, 0.10),
-            (-0.10, 0.10),
-            (0.10, -0.10),
-            (-0.10, -0.10),
-            (0.15, 0.00),
-            (-0.15, 0.00),
-            (0.00, 0.15),
-        ]
-        boxes = [
-            (0.25, 0.35, 0.25),
-            # (0.25, 0.25, 0.25),
-            # (0.3, 0.2, 0.2),
-            # (0.25, 0.35, 0.25),
-            # (0.25, 0.25, 0.25),
-            # (0.3, 0.2, 0.2),
-        ]
-
-        for box_index, (hx, hy, hz) in enumerate(boxes):
-            ox, oy = offsets_xy[box_index % len(offsets_xy)]
-            pz = drop_z + float(box_index) * 0.6
-            body = builder.add_body(
-                xform=wp.transform(p=wp.vec3(float(ox), float(oy), pz), q=wp.quat_identity()),
-                mass=75.0,
-            )
-            builder.add_shape_box(body, hx=float(hx), hy=float(hy), hz=float(hz))
-
-    def _emit_particles(self, builder: newton.ModelBuilder, voxel_size: float):
-        particles_per_cell = 3.0
-        density = 2500.0
-        bed_lo = np.array([-1.5, -1.5, 0.0])
-        bed_hi = np.array([1.5, 1.5, 0.5])
-        bed_res = np.array(np.ceil(particles_per_cell * (bed_hi - bed_lo) / voxel_size), dtype=int)
-
-        cell_size = (bed_hi - bed_lo) / bed_res
-        cell_volume = np.prod(cell_size)
-        radius = float(np.max(cell_size) * 0.5)
-        mass = float(np.prod(cell_volume) * density)
-
-        builder.add_particle_grid(
-            pos=wp.vec3(bed_lo),
-            rot=wp.quat_identity(),
-            vel=wp.vec3(0.0),
-            dim_x=bed_res[0] + 1,
-            dim_y=bed_res[1] + 1,
-            dim_z=bed_res[2] + 1,
-            cell_x=cell_size[0],
-            cell_y=cell_size[1],
-            cell_z=cell_size[2],
-            mass=mass,
-            jitter=2.0 * radius,
-            radius_mean=radius,
-            custom_attributes={"mpm:friction": 0.75},
-        )
-
-    @staticmethod
-    def create_parser():
-        parser = newton.examples.create_parser()
-        newton.examples.add_coupled_view_args(parser)
-        parser.add_argument(
-            "--mass-scale",
-            "-pmr",
-            help="Scale factor for source effective mass used by the MPM proxy collider",
-            type=float,
-            default=1.0,
-        )
-        parser.add_argument(
-            "--proxy-iterations",
-            help="Number of proxy relaxation passes per coupled step",
-            type=int,
-            default=1,
-        )
-        parser.add_argument(
-            "--rigid-substeps",
-            "--mujoco-substeps",
-            dest="rigid_substeps",
-            help="Number of rigid-solver substeps per coupled step",
-            type=int,
-            default=4,
-        )
-        return parser
+        self.solver.reset(self.state_0)
 
 
 if __name__ == "__main__":
-    parser = Example.create_parser()
-    viewer, args = newton.examples.init(parser)
-    example = Example(viewer, args)
-    newton.examples.run(example, args)
+    main(Example)

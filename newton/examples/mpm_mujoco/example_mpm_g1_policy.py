@@ -30,6 +30,7 @@ import yaml
 import newton
 import newton.examples
 from newton import JointTargetMode
+from newton._src.utils.download_assets import download_git_folder
 from newton.examples.mpm_mujoco.common.kernel import (
     compute_body_forces,
     subtract_body_force,
@@ -176,99 +177,12 @@ class NewtonEnv:
         self.add_sand(sand_builder, voxel_size=self.mpm_material_cfg.voxel_size)
         sand_builder.end_world()
 
-        """
-        finalize rigid body and sand models
-        """
-        self.model = builder.finalize()
-        self.sand_model = sand_builder.finalize()
-
-        """
-        set MPM parameters
-        """
-        MAX_NODE = 2**20
-
-        mpm_options = SolverImplicitMPM.Config()
-        mpm_options.voxel_size = MPM_VOXEL_SIZE
-        mpm_options.grid_type = "sparse"
-        mpm_options.grid_padding = 0
-        mpm_options.max_active_cell_count = max(self.sand_model.particle_count, 1 << 13)
-        mpm_options.max_leaf_node_count = 1 << 13
-        mpm_options.max_lower_node_count = 1 << 10
-        mpm_options.max_upper_node_count = 1 << 5
-        mpm_options.strain_basis = "P0"
-        mpm_options.transfer_scheme = "apic"
-        mpm_options.max_iterations = 25
-        mpm_options.tolerance = 1.0e-4
-        mpm_options.warmstart_mode = "auto"
-        mpm_options.velocity_basis = "Q1"
-        mpm_options.collider_basis = "pic27"
-        mpm_options.collider_velocity_mode = "forward"
-        mpm_options.solver = "auto"
-        mpm_options.critical_fraction = 0.0
-        mpm_options.separate_worlds = True
-        mpm_options.project_outside_colliders = False
-
-        """
-        setup MPM solver
-        """
-        self.mpm_solver = SolverImplicitMPM(self.sand_model, mpm_options)
-
-        # Coupling relaxation: foot mass << total body mass, so scale apparent
-        # foot mass up to prevent under-coupling (same approach as G1 reference).
-        # G1: total=32.34 kg, foot=0.608 kg, 2 feet support → 32.34/(2*0.608) ≈ 26.6
-        coupling_relaxation = config.get("coupling_relaxation", 26.6)
-        # One MPM collider per body (including the static body -1).
-        # Override MPM margins without changing rigid foot/platform contacts.
-        collider_body_ids = sorted(
-            {
-                body
-                for body, flags in zip(builder.shape_body, builder.shape_flags, strict=True)
-                if flags & newton.ShapeFlags.COLLIDE_PARTICLES
-            }
-        )
-        self.mpm_solver.setup_collider(
-            model=self.model,
-            collider_body_ids=collider_body_ids,
-            collider_margins=[MPM_COLLIDER_MARGIN] * len(collider_body_ids),
-            body_mass=self.model.body_mass * coupling_relaxation,
-            body_inv_inertia=self.model.body_inv_inertia / coupling_relaxation,
-        )
-
-        """
-        setup rigid body solver
-        """
-        self.rb_solver = newton.solvers.SolverMuJoCo(
-            self.model,
-            use_mujoco_cpu=False,
-            solver="newton",
-            integrator="implicitfast",
-            njmax=1000,
-            nconmax=300,
-            cone="pyramidal",
-            impratio=1.0,
-            iterations=100,
-            use_mujoco_contacts=False,
-        )
-
-        """
-        prepare simulation states
-        """
-        self.state_0 = self.model.state()
-        self.state_1 = self.model.state()
-
-        self.sand_state_0 = self.sand_model.state()
-        self.sand_state_0.body_q = wp.empty_like(self.state_0.body_q)
-        self.sand_state_0.body_qd = wp.empty_like(self.state_0.body_qd)
-        self.sand_state_0.body_f = wp.empty_like(self.state_0.body_f)
-
-        self.control = self.model.control()
-        self.rigid_collision_pipeline = newton.CollisionPipeline(self.model, soft_contact_max=0)
-        self.contacts = self.rigid_collision_pipeline.contacts()
+        self.setup_physics(builder, sand_builder)
 
         """
         setup viewer
         """
-        self.viewer.set_model(self.model)
+        self.viewer.set_model(self.render_model())
         if isinstance(self.viewer, newton.viewer.ViewerGL):
             self.viewer.register_ui_callback(self.render_ui, position="side")
         self.viewer.show_particles = True
@@ -291,16 +205,7 @@ class NewtonEnv:
         # wp.launch(kernel=sample_sinusoidal_terrain, dim=self.sand_model.particle_count, inputs=[self._initial_sand_q, 0.1, 0.1])
         # wp.copy(self.sand_state_0.particle_q, self._initial_sand_q)
 
-        # ------------------------------------------------------------------ #
-        # Two-way coupling buffers
-        # ------------------------------------------------------------------ #
-        self.collider_impulses = wp.zeros(MAX_NODE, dtype=wp.vec3, device=self.model.device)
-        self.collider_impulse_pos = wp.zeros(MAX_NODE, dtype=wp.vec3, device=self.model.device)
-        self.collider_impulse_ids = wp.full(MAX_NODE, value=-1, dtype=int, device=self.model.device)
-        self.collect_collider_impulses()
-
-        self.collider_body_id = self.mpm_solver.collider_body_index
-        self.body_sand_forces = wp.zeros_like(self.state_0.body_f)
+        self.setup_coupling_buffers()
 
         self.particle_render_colors = wp.full(
             self.sand_model.particle_count,
@@ -354,6 +259,126 @@ class NewtonEnv:
     """
     initializations
     """
+
+    def setup_physics(self, builder, sand_builder):
+        """Create separate models and solvers for direct impulse exchange."""
+        """
+        finalize rigid body and sand models
+        """
+        self.model = builder.finalize()
+        self.sand_model = sand_builder.finalize()
+
+        """
+        set MPM parameters
+        """
+        mpm_options = self.create_mpm_options(self.sand_model.particle_count)
+
+        """
+        setup MPM solver
+        """
+        self.mpm_solver = SolverImplicitMPM(self.sand_model, mpm_options)
+
+        # Coupling relaxation: foot mass << total body mass, so scale apparent
+        # foot mass up to prevent under-coupling (same approach as G1 reference).
+        # G1: total=32.34 kg, foot=0.608 kg, 2 feet support → 32.34/(2*0.608) ≈ 26.6
+        coupling_relaxation = self.config.get("coupling_relaxation", 26.6)
+        # One MPM collider per body (including the static body -1).
+        # Override MPM margins without changing rigid foot/platform contacts.
+        collider_body_ids = sorted(
+            {
+                body
+                for body, flags in zip(builder.shape_body, builder.shape_flags, strict=True)
+                if flags & newton.ShapeFlags.COLLIDE_PARTICLES
+            }
+        )
+        self.mpm_solver.setup_collider(
+            model=self.model,
+            collider_body_ids=collider_body_ids,
+            collider_margins=[MPM_COLLIDER_MARGIN] * len(collider_body_ids),
+            body_mass=self.model.body_mass * coupling_relaxation,
+            body_inv_inertia=self.model.body_inv_inertia / coupling_relaxation,
+        )
+
+        """
+        setup rigid body solver
+        """
+        self.rb_solver = self.create_rigid_solver(self.model)
+
+        """
+        prepare simulation states
+        """
+        self.state_0 = self.model.state()
+        self.state_1 = self.model.state()
+
+        self.sand_state_0 = self.sand_model.state()
+        self.sand_state_0.body_q = wp.empty_like(self.state_0.body_q)
+        self.sand_state_0.body_qd = wp.empty_like(self.state_0.body_qd)
+        self.sand_state_0.body_f = wp.empty_like(self.state_0.body_f)
+
+        self.control = self.model.control()
+        self.rigid_collision_pipeline = newton.CollisionPipeline(self.model, soft_contact_max=0)
+        self.contacts = self.rigid_collision_pipeline.contacts()
+
+    @staticmethod
+    def create_mpm_options(particle_count):
+        """Use the same MPM discretization and solve settings in both examples."""
+        mpm_options = SolverImplicitMPM.Config()
+        mpm_options.voxel_size = MPM_VOXEL_SIZE
+        mpm_options.grid_type = "sparse"
+        mpm_options.grid_padding = 0
+        mpm_options.max_active_cell_count = max(particle_count, 1 << 13)
+        mpm_options.max_leaf_node_count = 1 << 13
+        mpm_options.max_lower_node_count = 1 << 10
+        mpm_options.max_upper_node_count = 1 << 5
+        mpm_options.strain_basis = "P0"
+        mpm_options.transfer_scheme = "apic"
+        mpm_options.max_iterations = 25
+        mpm_options.tolerance = 1.0e-4
+        mpm_options.warmstart_mode = "auto"
+        mpm_options.velocity_basis = "Q1"
+        mpm_options.collider_basis = "pic27"
+        mpm_options.collider_velocity_mode = "forward"
+        mpm_options.solver = "auto"
+        mpm_options.critical_fraction = 0.0
+        mpm_options.separate_worlds = True
+        mpm_options.project_outside_colliders = False
+        return mpm_options
+
+    @staticmethod
+    def create_rigid_solver(model):
+        """Create the shared MuJoCo rigid-body solver configuration."""
+        return newton.solvers.SolverMuJoCo(
+            model,
+            use_mujoco_cpu=False,
+            solver="newton",
+            integrator="implicitfast",
+            njmax=1000,
+            nconmax=300,
+            cone="pyramidal",
+            impratio=1.0,
+            iterations=100,
+            use_mujoco_contacts=False,
+        )
+
+    def setup_coupling_buffers(self):
+        """Allocate buffers for the direct impulse exchange."""
+        # ------------------------------------------------------------------ #
+        # Two-way coupling buffers
+        # ------------------------------------------------------------------ #
+        # pic27 stores at most one impulse slot per particle. The finalized count
+        # already includes the configured bed dimensions and particle sampling.
+        impulse_capacity = self.sand_model.particle_count
+        self.collider_impulses = wp.zeros(impulse_capacity, dtype=wp.vec3, device=self.model.device)
+        self.collider_impulse_pos = wp.zeros(impulse_capacity, dtype=wp.vec3, device=self.model.device)
+        self.collider_impulse_ids = wp.full(impulse_capacity, value=-1, dtype=int, device=self.model.device)
+        self.collect_collider_impulses()
+
+        self.collider_body_id = self.mpm_solver.collider_body_index
+        self.body_sand_forces = wp.zeros_like(self.state_0.body_f)
+
+    def render_model(self):
+        """Return the rigid model; particles are drawn separately with material colors."""
+        return self.model
 
     def configure_testbed(self):
         """Place the flat bed and approach in IsaacLab's +X walking coordinates."""
@@ -687,7 +712,7 @@ class NewtonEnv:
         # update_command() ran just before inference: use it immediately, not one frame later.
         self.obs[:, -7:] = self._current_policy_command()
         with torch.inference_mode():
-            self.act = self.policy(self.obs)
+            self.act.copy_(self.policy(self.obs))
             self.rearranged_act = torch.index_select(self.act, 1, self.mjc_to_physx_indices)
             a = self.joint_pos_initial + self.config["action_scale"] * self.rearranged_act
             self.joint_target_q_torch[self.joint_target_offset :] = a.squeeze(0)
@@ -764,8 +789,13 @@ class NewtonEnv:
 
     def collect_collider_impulses(self):
         impulses, pos, ids = self.mpm_solver.collect_collider_impulses(self.sand_state_0)
+        n = impulses.shape[0]
+        if n > self.collider_impulses.shape[0]:
+            raise RuntimeError(
+                f"MPM returned {n} impulse slots, exceeding the particle-based capacity "
+                f"{self.collider_impulses.shape[0]}. Update buffer sizing if the collider basis changes."
+            )
         self.collider_impulse_ids.fill_(-1)
-        n = min(impulses.shape[0], self.collider_impulses.shape[0])
         self.collider_impulses[:n].assign(impulses[:n])
         self.collider_impulse_pos[:n].assign(pos[:n])
         self.collider_impulse_ids[:n].assign(ids[:n])
@@ -822,7 +852,8 @@ class NewtonEnv:
 
         return reset, time_out
 
-    def reset(self):
+    def reset_physics(self):
+        """Restore rigid and particle state and clear direct coupling feedback."""
         # Rigid body reset
         wp.copy(self.state_0.joint_q, self._initial_joint_q)
         wp.copy(self.state_0.joint_qd, self._initial_joint_qd)
@@ -846,6 +877,9 @@ class NewtonEnv:
         self.collider_impulses.zero_()
         self.collider_impulse_pos.zero_()
         self.collider_impulse_ids.fill_(-1)
+
+    def reset(self):
+        self.reset_physics()
 
         # Control reset
         self.joint_target_q_torch[self.joint_target_offset :] = self.joint_pos_initial.squeeze(0)
@@ -1026,7 +1060,8 @@ class NewtonEnv:
         _changed, self.follow_cam = imgui.checkbox("Follow Camera", self.follow_cam)
 
 
-if __name__ == "__main__":
+def main(env_class=NewtonEnv):
+    """Run either G1 coupling implementation with the same command-line setup."""
     parser = newton.examples.create_parser()
     parser.add_argument(
         "--config",
@@ -1055,8 +1090,6 @@ if __name__ == "__main__":
 
     if hasattr(viewer, "hide_loading_splash"):
         viewer.hide_loading_splash()
-
-    from newton._src.utils.download_assets import download_git_folder
 
     asset_dir = str(download_git_folder("https://github.com/jnskkmhr/newton-assets.git", "unitree_g1", ref="main"))
 
@@ -1088,7 +1121,7 @@ if __name__ == "__main__":
     MAX_TRIAL = args.max_trial
     log_dir = f"./logs/{args.tag}"
 
-    env = NewtonEnv(
+    env = env_class(
         viewer=viewer,
         config=config,
         mjc_to_physx=mjc_to_physx,
@@ -1108,7 +1141,7 @@ if __name__ == "__main__":
             log_item=["obs"],
         )
 
-    obs = env._get_observations()
+    env._get_observations()
     log = env._get_log() if args.log else None
 
     episode_length_log = [0] * num_envs
@@ -1125,7 +1158,7 @@ if __name__ == "__main__":
 
         if not env.viewer.is_paused():
             with wp.ScopedTimer("step", active=False):
-                obs, dones, time_out = env.step()
+                _obs, dones, time_out = env.step()
                 dones = dones | time_out
                 if args.log:
                     log = env._get_log()
@@ -1167,3 +1200,7 @@ if __name__ == "__main__":
         print(f"[INFO] Video saved to {video_filename}")
 
     env.viewer.close()
+
+
+if __name__ == "__main__":
+    main()
