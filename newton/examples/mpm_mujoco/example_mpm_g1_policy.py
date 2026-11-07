@@ -944,7 +944,7 @@ class NewtonEnv:
 
         if self.follow_cam:
             root_pos = self.state_0.joint_q.numpy()[:3]
-            self.viewer.set_camera(pos=wp.vec3(*root_pos) + wp.vec3(2.0, 0.0, 0.0), pitch=-5.0, yaw=-180.0)
+            self.viewer.set_camera(pos=wp.vec3(*root_pos) + wp.vec3(0.0, -2.0, 0.0), pitch=-5.0, yaw=90.0)
 
         # RTX retains particle style when only positions are supplied on later frames.
         # Other viewers still receive radii and colors on every call.
