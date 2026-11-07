@@ -108,7 +108,7 @@ class NewtonEnv:
 
         self.fps = 50
         self.frame_dt = 1.0 / self.fps
-        self.sim_substeps = 8  # 400 Hz physics
+        self.sim_substeps = 4  # 200 Hz MPM, matching IsaacLab; rigid integration runs at 400 Hz.
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.max_episode_length = int(episode_length_s * self.fps)
 
@@ -260,9 +260,12 @@ class NewtonEnv:
         if isinstance(self.viewer, newton.viewer.ViewerGL):
             self.viewer.register_ui_callback(self.render_ui, position="side")
         self.viewer.show_particles = True
-        self.show_impulses = True
+        # pic27 provides one impulse slot per particle, including zero impulses.
+        # Drawing every slot as an RTX line is expensive; keep this debug view opt-in.
+        self.show_impulses = False
         self.show_velocity = True
         self.follow_cam = True
+        self._rtx_particle_style_initialized = False
 
         # ------------------------------------------------------------------ #
         # Initial state
@@ -872,13 +875,19 @@ class NewtonEnv:
             root_pos = self.state_0.joint_q.numpy()[:3]
             self.viewer.set_camera(pos=wp.vec3(*root_pos) + wp.vec3(2.0, 0.0, 0.0), pitch=-5.0, yaw=-180.0)
 
+        # RTX retains particle style when only positions are supplied on later frames.
+        # Other viewers still receive radii and colors on every call.
+        is_rtx = isinstance(self.viewer, newton.viewer.ViewerRTX)
+        update_style = not is_rtx or not self._rtx_particle_style_initialized
         self.viewer.log_points(
             "/sand",
             points=self.sand_state_0.particle_q,
-            radii=self.sand_model.particle_radius,
-            colors=self.particle_render_colors,
+            radii=self.sand_model.particle_radius if update_style else None,
+            colors=self.particle_render_colors if update_style else None,
             hidden=not self.viewer.show_particles,
         )
+        if is_rtx:
+            self._rtx_particle_style_initialized = True
 
         if self.show_impulses:
             impulses, pos, _cid = self.mpm_solver.collect_collider_impulses(self.sand_state_0)
@@ -1016,7 +1025,7 @@ if __name__ == "__main__":
         )
 
     obs = env._get_observations()
-    log = env._get_log()
+    log = env._get_log() if args.log else None
 
     episode_length_log = [0] * num_envs
     episode_counter = [0] * num_envs
@@ -1034,7 +1043,8 @@ if __name__ == "__main__":
             with wp.ScopedTimer("step", active=False):
                 obs, dones, time_out = env.step()
                 dones = dones | time_out
-                log = env._get_log()
+                if args.log:
+                    log = env._get_log()
 
         with wp.ScopedTimer("render", active=False):
             env.render()
