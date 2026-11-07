@@ -6,7 +6,7 @@
 #
 # Unitree G1 locomotion with a distillation policy coupled with implicit
 # MPM terrain. The default material is closely packed poppy seeds with
-# 0.02 m voxels and 1.25 particles per cell along each axis (fixed grid).
+# 0.02 m voxels and 1.25 particles per cell along each axis (sparse grid).
 #
 # Ported from example_mpm_g1_distillation_running_decode.py (old newton)
 # to the new newton_dev API.
@@ -58,14 +58,13 @@ PLATFORM_CONTACT_GAP = 0.002
 MPM_PARTICLES_PER_CELL = 1.25
 MPM_VISUAL_COLOR = (0.32, 0.24, 0.21)
 
-# Closely packed poppy seeds. Density is bulk bed density [kg/m³].
-# The supplied preset refers to Yang et al. (2020), Table 2.
-# Use Newton particle attributes directly; MPMParticleMaterialCfg is IsaacLab-specific.
-SAND_MATERIAL_CFG = {
-    "density": 682.0,
+# Bulk bed density [kg/m³] and friction coefficient. These are tuning presets,
+# not calibrated material models. The elastic/plastic settings are shared.
+# Supplied density references: FHWA (dense sand), Manick et al. (basalt),
+# and Yang et al. (poppy seeds).
+_COMMON_MATERIAL = {
     "young_modulus": 1.0e15,
     "poisson_ratio": 0.3,
-    "friction": 1.07,  # Estimate from tan(47 degrees); requires calibration.
     "yield_pressure": 1.0e15,
     "tensile_yield_ratio": 0.0,
     "yield_stress": 0.0,
@@ -73,6 +72,18 @@ SAND_MATERIAL_CFG = {
     "dilatancy": 0.0,
     "viscosity": 0.0,
 }
+MATERIAL_PRESETS = {
+    "sand": {**_COMMON_MATERIAL, "density": 2700.0, "friction": 0.58},
+    "beach_sand": {**_COMMON_MATERIAL, "density": 1800.0, "friction": 0.80},
+    "basalt": {**_COMMON_MATERIAL, "density": 1660.0, "friction": 0.88},
+    "poppy_loose": {**_COMMON_MATERIAL, "density": 640.0, "friction": 0.73},
+    "poppy": {**_COMMON_MATERIAL, "density": 682.0, "friction": 1.07},
+}
+
+# The 2 cm bed needs more cells than the previous 131,072-cell allocation.
+# Keep a bounded allocation so the sparse grid can rebuild during graph replay.
+MPM_MAX_ACTIVE_CELL_COUNT = 1 << 19
+RIGID_SUBSTEPS = 2
 
 # --------------------------------------------------------------------------- #
 # Environment
@@ -107,69 +118,26 @@ class NewtonEnv:
         """
         define material parameters
         """
-        if sand_type == "poppy":
-            self.mpm_material_cfg = MPMMaterialCfg(
-                bulk_density=SAND_MATERIAL_CFG["density"],
-                friction_angle=math.degrees(math.atan(SAND_MATERIAL_CFG["friction"])),
-                youngs_modulus=SAND_MATERIAL_CFG["young_modulus"],
-                poissons_ratio=SAND_MATERIAL_CFG["poisson_ratio"],
-                critical_fraction=0.5,
-                particles_per_cell=MPM_PARTICLES_PER_CELL,
-                voxel_size=MPM_VOXEL_SIZE,
-                voxel_size_vis=MPM_VOXEL_SIZE,
-                transfer_scheme="apic",
-                collider_basis="S2",
-                collider_velocity_mode="forward",
-                particle_color=MPM_VISUAL_COLOR,
-            )
-        elif sand_type == "sand":
-            # dry sand
-            packing_density = 0.6
-            self.mpm_material_cfg = MPMMaterialCfg(
-                bulk_density=1500.0 * packing_density,  # newton's default parameters
-                friction_angle=30.0,  # spawn poppy seed and stops flowing, measure angle.
-                youngs_modulus=15.0e6,  # 15-20 MPa is reasonable range
-                poissons_ratio=0.3,
-                critical_fraction=0.5,  # 0.5 would be suitable? If particle density is lower than this -> particle stops interacting
-                particles_per_cell=3.0,
-                voxel_size=0.025,
-                voxel_size_vis=0.06,
-                transfer_scheme="apic",
-                collider_basis="S2",
-                collider_velocity_mode="forward",
-                # transfer_scheme="pic",
-                # collider_basis="pic27",
-                # collider_velocity_mode="forward",
-                particle_color=(0.45, 0.4, 0.28),
-            )
-        elif sand_type == "basalt":
-            # basalt
-            packing_density = 1.0
-            self.mpm_material_cfg = MPMMaterialCfg(
-                bulk_density=2700.0 * packing_density,  # 2700-3000 for basalt
-                friction_angle=40.0,  # spawn poppy seed and stops flowing, measure angle.
-                youngs_modulus=40.0e9,  # 15-20 GPa is reasonable range
-                poissons_ratio=0.3,
-                critical_fraction=0.5,  # 0.5 would be suitable? If particle density is lower than this -> particle stops interacting
-                particles_per_cell=3.0,
-                voxel_size=0.025,
-                voxel_size_vis=0.06,
-                transfer_scheme="apic",
-                collider_basis="S2",
-                collider_velocity_mode="forward",
-                # transfer_scheme="pic",
-                # collider_basis="pic27",
-                # collider_velocity_mode="finite_difference",
-                particle_color=(0.18, 0.14, 0.11),
-            )
-        else:
-            raise ValueError(f"Unknown sand type: {sand_type}")
-
-        self.particle_material_attributes = (
-            {f"mpm:{name}": value for name, value in SAND_MATERIAL_CFG.items() if name != "density"}
-            if sand_type == "poppy"
-            else {"mpm:friction": math.tan(math.radians(self.mpm_material_cfg.friction_angle))}
+        if sand_type not in MATERIAL_PRESETS:
+            raise ValueError(f"Unknown sand type: {sand_type}; choose from {tuple(MATERIAL_PRESETS)}")
+        material = MATERIAL_PRESETS[sand_type]
+        self.mpm_material_cfg = MPMMaterialCfg(
+            bulk_density=material["density"],
+            friction_angle=math.degrees(math.atan(material["friction"])),
+            youngs_modulus=material["young_modulus"],
+            poissons_ratio=material["poisson_ratio"],
+            critical_fraction=0.0,
+            particles_per_cell=MPM_PARTICLES_PER_CELL,
+            voxel_size=MPM_VOXEL_SIZE,
+            voxel_size_vis=MPM_VOXEL_SIZE,
+            transfer_scheme="apic",
+            collider_basis="pic27",
+            collider_velocity_mode="forward",
+            particle_color=MPM_VISUAL_COLOR,
         )
+        self.particle_material_attributes = {
+            f"mpm:{name}": value for name, value in material.items() if name != "density"
+        }
 
         """
         setup rigid body builder
@@ -180,11 +148,14 @@ class NewtonEnv:
             limit_ke=1.0e3,
             limit_kd=1.0e1,
         )
-        builder.default_shape_cfg.ke = 5.0e4
-        builder.default_shape_cfg.kd = 5.0e2
+        builder.default_shape_cfg.ke = 160000.0
+        builder.default_shape_cfg.kd = 1100.0
         builder.default_shape_cfg.kf = 1.0e3
         builder.default_shape_cfg.mu = 0.75
+        builder.default_shape_cfg.margin = 0.0
+        builder.begin_world()
         self.add_robot(builder)
+        builder.end_world()
         self.add_scene(builder)
 
         """
@@ -192,7 +163,9 @@ class NewtonEnv:
         """
         sand_builder = newton.ModelBuilder()
         SolverImplicitMPM.register_custom_attributes(sand_builder)
-        self.add_sand(sand_builder, voxel_size=self.mpm_material_cfg.voxel_size_vis)
+        sand_builder.begin_world()
+        self.add_sand(sand_builder, voxel_size=self.mpm_material_cfg.voxel_size)
+        sand_builder.end_world()
 
         """
         finalize rigid body and sand models
@@ -203,21 +176,25 @@ class NewtonEnv:
         """
         set MPM parameters
         """
-        MAX_ACTIVE_CELLS = 2**17
         MAX_NODE = 2**20
 
         mpm_options = SolverImplicitMPM.Config()
-        mpm_options.voxel_size = self.mpm_material_cfg.voxel_size
-        mpm_options.tolerance = 1.0e-6
-        mpm_options.grid_type = "fixed"
-        mpm_options.grid_padding = 50
-        mpm_options.max_active_cell_count = MAX_ACTIVE_CELLS
+        mpm_options.voxel_size = MPM_VOXEL_SIZE
+        mpm_options.grid_type = "sparse"
+        mpm_options.grid_padding = 0
+        mpm_options.max_active_cell_count = MPM_MAX_ACTIVE_CELL_COUNT
         mpm_options.strain_basis = "P0"
-        mpm_options.max_iterations = 50
-        # mpm_options.transfer_scheme = self.mpm_material_cfg.transfer_scheme
-        # mpm_options.collider_basis = self.mpm_material_cfg.collider_basis
-        # mpm_options.collider_velocity_mode = self.mpm_material_cfg.collider_velocity_mode
-        mpm_options.critical_fraction = self.mpm_material_cfg.critical_fraction
+        mpm_options.transfer_scheme = "apic"
+        mpm_options.max_iterations = 25
+        mpm_options.tolerance = 1.0e-4
+        mpm_options.warmstart_mode = "auto"
+        mpm_options.velocity_basis = "Q1"
+        mpm_options.collider_basis = "pic27"
+        mpm_options.collider_velocity_mode = "forward"
+        mpm_options.solver = "auto"
+        mpm_options.critical_fraction = 0.0
+        mpm_options.separate_worlds = True
+        mpm_options.project_outside_colliders = False
 
         """
         setup MPM solver
@@ -250,18 +227,15 @@ class NewtonEnv:
         """
         self.rb_solver = newton.solvers.SolverMuJoCo(
             self.model,
-            # ls_iterations=50,
-            # njmax=1000,
             use_mujoco_cpu=False,
             solver="newton",
             integrator="implicitfast",
-            njmax=300,
-            nconmax=150,
-            cone="elliptic",
-            impratio=100,
+            njmax=1000,
+            nconmax=300,
+            cone="pyramidal",
+            impratio=1.0,
             iterations=100,
-            ls_iterations=50,
-            use_mujoco_contacts=True,
+            use_mujoco_contacts=False,
         )
 
         """
@@ -276,7 +250,8 @@ class NewtonEnv:
         self.sand_state_0.body_f = wp.empty_like(self.state_0.body_f)
 
         self.control = self.model.control()
-        self.contacts = self.model.contacts()
+        self.rigid_collision_pipeline = newton.CollisionPipeline(self.model, soft_contact_max=0)
+        self.contacts = self.rigid_collision_pipeline.contacts()
 
         """
         setup viewer
@@ -581,6 +556,7 @@ class NewtonEnv:
 
         if self.graph:
             wp.capture_launch(self.graph)
+            self.mpm_solver.check_sparse_grid_rebuild_status()
         else:
             self._apply_action()
 
@@ -671,10 +647,16 @@ class NewtonEnv:
             )
             self.body_sand_forces.assign(self.state_0.body_f)
 
-            self.viewer.apply_forces(self.state_0)
-            self.model.collide(self.state_0, self.contacts)
-            self.rb_solver.step(self.state_0, self.state_1, self.control, self.contacts, self.sim_dt)
-            self.state_0, self.state_1 = self.state_1, self.state_0
+            # Hold the lagged MPM force over both rigid integration steps.
+            for _ in range(RIGID_SUBSTEPS):
+                self.state_0.clear_forces()
+                self.state_0.body_f.assign(self.body_sand_forces)
+                self.viewer.apply_forces(self.state_0)
+                self.rigid_collision_pipeline.collide(self.state_0, self.contacts)
+                self.rb_solver.step(
+                    self.state_0, self.state_1, self.control, self.contacts, self.sim_dt / RIGID_SUBSTEPS
+                )
+                self.state_0, self.state_1 = self.state_1, self.state_0
 
             self.simulate_sand()
 
@@ -973,7 +955,13 @@ if __name__ == "__main__":
     parser.add_argument("--tag", type=str, default="sand", help="Tag for the log directory.")
     parser.add_argument("--episode-length-s", type=float, default=6.0, help="Episode length in seconds.")
     parser.add_argument(
-        "--sand_type", type=str, default="poppy", choices=["basalt", "sand", "poppy"], help="Type of sand to simulate."
+        "--sand-type",
+        "--sand_type",
+        dest="sand_type",
+        type=str,
+        default="poppy",
+        choices=tuple(MATERIAL_PRESETS),
+        help="Granular material preset (poppy: closely packed seeds).",
     )
 
     viewer, args = newton.examples.init(parser)
