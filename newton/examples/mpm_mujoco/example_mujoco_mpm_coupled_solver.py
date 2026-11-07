@@ -18,7 +18,6 @@ from newton.solvers.experimental.coupled import SolverCoupledProxy
 
 import newton
 from newton.examples.mpm_mujoco.example_mpm_g1_policy import (
-    MPM_COLLIDER_MARGIN,
     RIGID_SUBSTEPS,
     NewtonEnv,
     main,
@@ -49,10 +48,6 @@ class Example(NewtonEnv):
             if body >= 0 and flags & newton.ShapeFlags.COLLIDE_PARTICLES:
                 proxy_bodies.add(body)
 
-        def configure_mpm_view(view):
-            # The rigid feet keep their contact margins; MPM uses zero margin.
-            view.shape_margin = wp.full_like(view.shape_margin, MPM_COLLIDER_MARGIN)
-
         self.solver = SolverCoupledProxy(
             model=self.model,
             entries=[
@@ -69,7 +64,6 @@ class Example(NewtonEnv):
                     solver=lambda view: SolverImplicitMPM(model=view, config=mpm_options),
                     particles=list(range(self.model.particle_count)),
                     shapes=mpm_shapes,
-                    configure_view=configure_mpm_view,
                     substeps=1,
                     in_place=True,
                 ),

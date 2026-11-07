@@ -283,7 +283,7 @@ class NewtonEnv:
         # G1: total=32.34 kg, foot=0.608 kg, 2 feet support → 32.34/(2*0.608) ≈ 26.6
         coupling_relaxation = self.config.get("coupling_relaxation", 26.6)
         # One MPM collider per body (including the static body -1).
-        # Override MPM margins without changing rigid foot/platform contacts.
+        # Preserve each shape's configured contact margin in MPM.
         collider_body_ids = sorted(
             {
                 body
@@ -294,7 +294,6 @@ class NewtonEnv:
         self.mpm_solver.setup_collider(
             model=self.model,
             collider_body_ids=collider_body_ids,
-            collider_margins=[MPM_COLLIDER_MARGIN] * len(collider_body_ids),
             body_mass=self.model.body_mass * coupling_relaxation,
             body_inv_inertia=self.model.body_inv_inertia / coupling_relaxation,
         )

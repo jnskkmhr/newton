@@ -64,7 +64,8 @@ uv run python newton/examples/mpm_mujoco/example_mujoco_mpm_coupled_solver.py \
 Both use a 4 × 2 × 0.3 m particle bed, 0.02 m voxels, and 593,750 particles
 with the default sampling. Policy and rendering run at 50 Hz, MPM at 200 Hz,
 and MuJoCo at 400 Hz. Both use the selected material preset and the same MPM
-and MuJoCo solver settings.
+and MuJoCo solver settings. Both preserve per-shape contact margins in MPM:
+0.02 m for the feet and 0 m for the sand support shapes.
 
 `example_mpm_g1_policy.py` directly collects MPM impulses and applies them as
 rigid-body forces. `example_mujoco_mpm_coupled_solver.py` instead uses
