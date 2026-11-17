@@ -538,6 +538,131 @@ def test_material_change_retains_velocity_partition(test, device):
     test.assertGreater(np.linalg.norm(state.mpm.particle_stress.numpy()), 1.0e-6)
 
 
+def test_particle_snapshot_selective_reset(test, device):
+    """Restore quiet prestressed particles in one world without stepping or changing another."""
+    _require_capture(test, device)
+    model, make_solver = _make_scene(device, worlds=2, collider=True)
+    solver, state = make_solver(), model.state()
+    world = model.particle_world.numpy()
+    selected, other = world == 0, world == 1
+    force = np.zeros((model.particle_count, 3), dtype=np.float32)
+    force[np.flatnonzero(selected)[0], 0] = 0.003
+    state.particle_f.assign(force)
+    for _ in range(5):
+        solver.step(state, state, None, None, 0.005)
+    state.clear_forces()
+    with wp.ScopedCapture(device=device) as capture:
+        solver.step(state, state, None, None, 0.005)
+    for _ in range(20):
+        wp.capture_launch(capture.graph)
+    test.assertGreater(np.linalg.norm(state.mpm.particle_stress.numpy()), 0.0)
+    initial = _snapshot(state)
+    initial_activity = solver.particle_activity.numpy().copy()
+    test.assertTrue(np.any(initial_activity[selected] == 0))
+    saved = solver.save_particle_state(state)
+    positions = state.particle_q.numpy()
+    positions[:, 1] += 0.01
+    state.particle_q.assign(positions)
+    state.mpm.particle_stress.zero_()
+    disturbed = _snapshot(state)
+    pointers = (state.particle_q.ptr, state.mpm.particle_stress.ptr, solver.particle_activity.ptr)
+    mask = wp.array([True, False, False], dtype=wp.bool, device=device)
+    solver.restore_particle_state(state, saved, world_mask=mask)
+    _assert_state(state, initial, mask=selected)
+    _assert_state(state, disturbed, mask=other)
+    np.testing.assert_array_equal(solver.particle_activity.numpy()[selected], initial_activity[selected])
+    test.assertEqual(pointers, (state.particle_q.ptr, state.mpm.particle_stress.ptr, solver.particle_activity.ptr))
+
+    # Material notification must not erase sleep history or invalidate an existing captured step.
+    activity = solver._particle_activity
+    buffer_names = ("base_flags", "base_material_flags", "base_density", "lower", "upper", "quiet_time")
+    activity_pointers = [getattr(activity, name).ptr for name in buffer_names]
+    material_buffer_names = ("particle_flags", "material_particle_flags", "material_particle_volume")
+    material_pointers = [getattr(solver._mpm_model, name).ptr for name in material_buffer_names]
+    before = solver.particle_activity.numpy().copy()
+    model.mpm.young_modulus.fill_(1.0e4)
+    solver.notify_model_changed(newton.ModelFlags.MODEL_PROPERTIES)
+    np.testing.assert_array_equal(solver.particle_activity.numpy(), before)
+    test.assertEqual(activity_pointers, [getattr(activity, name).ptr for name in buffer_names])
+    test.assertEqual(material_pointers, [getattr(solver._mpm_model, name).ptr for name in material_buffer_names])
+    # Replay the original graph: an approaching collider must wake restored sleeping particles.
+    poses = state.body_q.numpy()
+    poses[0, :3] = (0.55, 0.025, 0.025)
+    state.body_q.assign(poses)
+    wp.capture_launch(capture.graph)
+    solver.check_sparse_grid_rebuild_status()
+    test.assertTrue(np.any(solver.particle_activity.numpy()[selected] == 2))
+    test.assertTrue(np.isfinite(state.particle_q.numpy()).all())
+
+
+def test_captured_body_regions_union_and_worlds(test, device):
+    """Two tracked objects share particles, move under capture, and cannot activate another world."""
+    _require_capture(test, device)
+    model, make_solver = _make_scene(device, worlds=2)
+    solver, state = make_solver(), model.state()
+    solver.step(state, state, None, None, 0.005)
+    poses = wp.array(
+        [
+            wp.transform(wp.vec3(0.08, 0.025, 0.025), wp.quat_identity()),
+            wp.transform(wp.vec3(0.48, 0.025, 0.025), wp.quat_identity()),
+            wp.transform(wp.vec3(5.0, 0.025, 0.025), wp.quat_identity()),
+        ],
+        dtype=wp.transform,
+        device=device,
+    )
+    worlds = wp.array([0, 0, 1], dtype=wp.int32, device=device)
+    solver.set_particle_active_regions(
+        body_indices=[0, 1, 2],
+        body_q=poses,
+        body_world=worlds,
+        half_extents=(0.03, 0.1, 0.1),
+        keep_material_motion=False,
+    )
+    state.particle_f.fill_(wp.vec3(0.001, 0.0, 0.0))
+    solver.update_particle_activity(state, 0.005)
+    x = state.particle_q.numpy()[:, 0]
+    world = model.particle_world.numpy()
+    enabled = model.particle_flags.numpy() != 0
+    modes = solver.particle_activity.numpy()
+    test.assertTrue(np.any(modes[enabled & (world == 0) & (x < 0.15)] == 2))
+    test.assertTrue(np.any(modes[enabled & (world == 0) & (x > 0.45)] == 2))
+    np.testing.assert_array_equal(modes[world == 1], 0)
+    test.assertTrue(np.any(modes[world == 0] == 1))  # Support extends past region edges.
+    with wp.ScopedCapture(device=device) as capture:
+        solver.step(state, state, None, None, 0.005)
+    frozen = _snapshot(state)
+    # Move both world-0 regions away; move the world-1 object into its own bed.
+    poses.assign(
+        [
+            wp.transform(wp.vec3(5.0, 0.025, 0.025), wp.quat_identity()),
+            wp.transform(wp.vec3(5.0, 0.025, 0.025), wp.quat_identity()),
+            wp.transform(wp.vec3(0.3, 0.025, 0.025), wp.quat_identity()),
+        ]
+    )
+    wp.capture_launch(capture.graph)
+    np.testing.assert_array_equal(solver.particle_activity.numpy()[world == 0], 0)
+    _assert_state(state, frozen, mask=world == 0)
+    test.assertTrue(np.any(solver.particle_activity.numpy()[enabled & (world == 1)] == 2))
+    # Overlapping duplicate descriptors must not duplicate or change particle state evolution.
+    solver.set_particle_active_regions(
+        body_indices=[2, 2], body_q=poses, body_world=worlds, half_extents=(0.03, 0.1, 0.1), keep_material_motion=False
+    )
+    solver.update_particle_activity(state, 0.005)
+    duplicate_modes = solver.particle_activity.numpy().copy()
+    solver.set_particle_active_regions(
+        body_indices=[2], body_q=poses, body_world=worlds, half_extents=(0.03, 0.1, 0.1), keep_material_motion=False
+    )
+    solver.update_particle_activity(state, 0.005)
+    np.testing.assert_array_equal(solver.particle_activity.numpy(), duplicate_modes)
+    # Conservative mode allows particle forces/motion to remain active outside tracked regions.
+    solver.set_particle_active_regions(
+        body_indices=[0], body_q=poses, body_world=worlds, half_extents=(0.03, 0.1, 0.1), keep_material_motion=True
+    )
+    solver.update_particle_activity(state, 0.005)
+    test.assertTrue(np.all(solver.particle_activity.numpy()[enabled] == 2))
+    solver.check_sparse_grid_rebuild_status()
+
+
 class TestImplicitMPMActivity(unittest.TestCase):
     """Exercise graph replay through public sleeping, working-set, and reset APIs."""
 
@@ -555,6 +680,8 @@ for function in (
     test_working_set_equivalence,
     test_captured_overflow_reset,
     test_material_change_retains_velocity_partition,
+    test_particle_snapshot_selective_reset,
+    test_captured_body_regions_union_and_worlds,
 ):
     add_function_test(
         TestImplicitMPMActivity,

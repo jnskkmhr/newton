@@ -1064,6 +1064,20 @@ class LastStepData:
                 )
 
 
+@wp.kernel(enable_backward=False)
+def _restore_particle_snapshot(
+    source: wp.array[Any],
+    worlds: wp.array[int],
+    world_mask: wp.array[wp.bool],
+    world_count: int,
+    destination: wp.array[Any],
+):
+    i = wp.tid()
+    world = worlds[i]
+    if not world_mask or world_mask[wp.where(world >= 0, world, world_count)]:
+        destination[i] = source[i]
+
+
 class SolverImplicitMPM(SolverBase, CouplingInterface):
     """Implicit MPM solver for granular and elasto-plastic materials.
 
@@ -1125,6 +1139,138 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
             particles, particle world IDs outside ``[-1, model.world_count)``,
             or particles that are not stored contiguously by world.
     """
+
+    @dataclass
+    class ParticleSnapshot:
+        """Device-resident particle state and sleep history owned by one solver.
+
+        Create with :meth:`SolverImplicitMPM.save_particle_state` and treat the returned
+        buffers as read-only. This is a runtime initial condition, not a material or USD
+        asset. It does not include body states, material parameters, grid warm starts,
+        or external forces. Changing geometry or material can invalidate equilibrium.
+
+        .. experimental::
+
+            Snapshot layout and reset integration may change.
+        """
+
+        _owner: Any
+        _particles: dict[str, wp.array]
+        _history: dict[str, wp.array]
+        _activity: dict[str, wp.array]
+
+    def save_particle_state(self, state: newton.State) -> ParticleSnapshot:
+        """Copy particle kinematics, constitutive state and quiet history into GPU buffers.
+
+        Args:
+            state: Current state of this solver's model. For coupled solvers use the entry state.
+
+        Returns:
+            An independent snapshot for :meth:`restore_particle_state`.
+
+        Raises:
+            RuntimeError: Called during capture or a previous sparse-grid step failed.
+            ValueError: State arrays do not match this model.
+
+        .. experimental::
+
+            Initial-state snapshots are runtime-only and tied to the creating solver.
+        """
+        if self.model.device.is_capturing:
+            raise RuntimeError("Save particle state outside CUDA graph capture.")
+        self._validate_reset_inputs(state)
+        self.check_sparse_grid_rebuild_status()
+        activity = self._particle_activity
+        return self.ParticleSnapshot(
+            self,
+            {name: wp.clone(getattr(state, name)) for name in ("particle_q", "particle_qd")},
+            {
+                name: wp.clone(getattr(state.mpm, name))
+                for name in (
+                    "particle_elastic_strain",
+                    "particle_transform",
+                    "particle_qd_grad",
+                    "particle_stress",
+                    "particle_Jp",
+                )
+            },
+            {}
+            if activity is None
+            else {
+                name: wp.clone(getattr(activity, name))
+                for name in ("activity", "quiet_time", "previous_stress", "stress_filter_valid", "stress_elapsed")
+            },
+        )
+
+    def restore_particle_state(
+        self,
+        state: newton.State,
+        snapshot: ParticleSnapshot,
+        world_mask: wp.array[wp.bool] | None = None,
+    ) -> None:
+        """Restore selected particles and sleep history without advancing physics.
+
+        Clear transient solver history, restore particle position, velocity, elastic strain,
+        deformation transform, velocity gradient, stress, plastic volume ratio and quiet timers.
+        Particle storage is updated in place, so existing step graphs remain usable. Current
+        material parameters are retained. The next step checks current collider poses before
+        particle integration; cached sleep labels never bypass collider wake-up checks.
+
+        Args:
+            state: Target state belonging to this solver's model.
+            snapshot: Snapshot from this solver. Geometry and sleeping configuration must remain compatible.
+            world_mask: Optional mask of shape ``(model.world_count + 1,)``. Last slot selects
+                global particles. None restores every world. A selected single-world grid is
+                treated as a full reset because it has no per-world grid offsets.
+
+        Raises:
+            ValueError: Snapshot belongs to another solver, sleeping enablement differs, or mask is invalid.
+            RuntimeError: Called during capture or a previous step failed.
+
+        .. experimental::
+
+            Restoring a coupled entry also requires the caller to synchronize parent/output
+            states and reset coupling feedback through the coupler's reset lifecycle.
+        """
+        if self.model.device.is_capturing:
+            raise RuntimeError("Restore particle state outside CUDA graph capture.")
+        if snapshot._owner is not self:
+            raise ValueError("Particle snapshot belongs to a different solver.")
+        if bool(snapshot._activity) != (self._particle_activity is not None):
+            raise ValueError("Particle snapshot requires unchanged sleeping enablement.")
+        self._validate_reset_inputs(state)
+        world_mask = self._normalize_reset_world_mask(world_mask)
+        reset_mask = world_mask
+        if world_mask is not None and self.model.world_count == 1:
+            selected = world_mask.numpy()
+            if not selected.any():
+                return
+            if selected.all() or (selected[0] and not np.any(self.model.particle_world.numpy() < 0)):
+                reset_mask = None
+        self.check_sparse_grid_rebuild_status()
+        self.reset(state, world_mask=reset_mask)
+        for snapshots, target in (
+            (snapshot._particles, state),
+            (snapshot._history, state.mpm),
+            (snapshot._activity, self._particle_activity),
+        ):
+            for name, source in snapshots.items():
+                wp.launch(
+                    _restore_particle_snapshot,
+                    dim=self.model.particle_count,
+                    inputs=[
+                        source,
+                        self.model.particle_world,
+                        world_mask,
+                        self.model.world_count,
+                        getattr(target, name),
+                    ],
+                    device=self.model.device,
+                )
+        if self._particle_activity is not None:
+            self._particle_activity.apply_activity(state)
+            self._particle_activity.planning_countdown.zero_()
+            self._particle_activity.planning_elapsed.zero_()
 
     @dataclass
     class Config:
@@ -2145,6 +2291,100 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         """
         return None if self._particle_activity is None else self._particle_activity.activity
 
+    def set_particle_active_regions(
+        self,
+        *,
+        body_indices: Sequence[int] | None,
+        half_extents: Sequence[float] | Sequence[Sequence[float]] = (0.8, 0.8, 0.8),
+        offsets: Sequence[float] | Sequence[Sequence[float]] = (0.0, 0.0, 0.0),
+        body_q: wp.array[wp.transform] | None = None,
+        body_world: wp.array[wp.int32] | None = None,
+        keep_material_motion: bool = True,
+    ) -> None:
+        """Restrict collider-driven activity to the union of body-following world-axis-aligned boxes.
+
+        Native fine-grained activity selection still applies inside each box. The stationary
+        support halo extends beyond the box to preserve the MPM basis stencil. Overlapping
+        boxes share particles and worlds remain isolated. Source pose arrays are read on GPU
+        during every step; update their contents in place before stepping. This does not move
+        particles, recycle slots, or reduce storage for the complete bed.
+
+        Args:
+            body_indices: Tracked body rows in the supplied arrays; None disables region filtering.
+            half_extents: Positive XYZ half sizes [m], shared or one vector per tracked body.
+            offsets: World-frame XYZ offsets [m] from body positions, shared or one per body.
+            body_q: Live world-frame body transforms. Required when enabling regions. For a coupled
+                solver these may be the parent model's poses; keep the chosen buffer current.
+            body_world: Matching body world IDs. Defaults to this solver model's IDs. Global
+                bodies (world -1) define regions in all worlds.
+            keep_material_motion: Preserve particle-driven activity outside the boxes, including
+                forces, changing stress, quiet grace periods, and swept motion. False forcibly
+                freezes distant material and changes the physical approximation.
+
+        Raises:
+            RuntimeError: Sleeping is disabled or configuration is attempted during capture.
+            ValueError: Body arrays, world IDs, indices or region dimensions are invalid.
+
+        .. experimental::
+
+            Runtime-only selection policy. Configure after settling and before graph capture;
+            changing descriptors requires recapture. No USD authoring schema is required.
+        """
+        if self.model.device.is_capturing:
+            raise RuntimeError("Configure particle regions outside CUDA graph capture.")
+        if self._particle_activity is None:
+            raise RuntimeError("Enable particle sleeping before configuring active regions.")
+        if body_indices is None:
+            self._particle_activity.regions = None
+            return
+        if body_q is None:
+            raise ValueError("Provide the live body_q array for tracked regions.")
+        from .particle_regions import ParticleRegions  # noqa: PLC0415
+
+        self._particle_activity.regions = ParticleRegions(
+            self.model,
+            self._particle_activity,
+            body_q,
+            self.model.body_world if body_world is None else body_world,
+            body_indices,
+            half_extents,
+            offsets,
+            keep_material_motion,
+        )
+        self._particle_activity.planning_countdown.zero_()
+
+    def update_particle_activity(self, state: newton.State, dt: float) -> None:
+        """Classify particles without advancing their positions or integrating MPM.
+
+        Use after preparing/restoring state and before sizing a compact working set. This advances
+        activity timers by ``dt`` seconds and evaluates current collider and tracking-region poses.
+
+        Args:
+            state: Current state belonging to this solver.
+            dt: Positive activity-planning interval [s].
+
+        Raises:
+            ValueError: The interval is not finite and positive or state arrays are incompatible.
+            RuntimeError: Sleeping is disabled.
+
+        .. experimental::
+
+            Activity preparation is a runtime-only operation.
+        """
+        if self._particle_activity is None:
+            raise RuntimeError("Enable particle sleeping before updating activity.")
+        if not math.isfinite(dt) or dt <= 0:
+            raise ValueError("Activity interval must be finite and positive.")
+        self._validate_reset_inputs(state)
+        self._particle_activity.update(
+            state,
+            dt,
+            self._mpm_model.collider,
+            self._last_step_data.body_q_prev,
+            self._separate_worlds,
+            collider_velocity_mode=self.collider_velocity_mode,
+        )
+
     def set_particle_sleeping(
         self,
         *,
@@ -2948,7 +3188,7 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         if flags & ModelFlags.MODEL_PROPERTIES:
             self._mpm_model.notify_particle_material_changed()
             if self._particle_activity is not None:
-                self._particle_activity.refresh(self._mpm_model)
+                self._particle_activity.refresh_material(self._mpm_model)
 
     @override
     def coupling_eval_gravity_acceleration(

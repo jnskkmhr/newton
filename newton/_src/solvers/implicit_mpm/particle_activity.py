@@ -652,6 +652,32 @@ def _classify_particles(
 
 
 @wp.kernel(enable_backward=False)
+def _apply_activity_state(
+    activity: wp.array[int],
+    base_flags: wp.array[int],
+    base_material_flags: wp.array[int],
+    base_density: wp.array[float],
+    velocities: wp.array[wp.vec3],
+    gradients: wp.array[wp.mat33],
+    flags: wp.array[int],
+    material_flags: wp.array[int],
+    density: wp.array[float],
+    advect_flags: wp.array[int],
+    transfer_velocity: wp.array[wp.vec3],
+    transfer_gradient: wp.array[wp.mat33],
+):
+    i = wp.tid()
+    mode = activity[i]
+    active = int(newton.ParticleFlags.ACTIVE)
+    flags[i] = wp.where(mode > 0, base_flags[i], base_flags[i] & ~active)
+    material_flags[i] = wp.where(mode > 0, base_material_flags[i], base_material_flags[i] & ~active)
+    advect_flags[i] = wp.where(mode == 2, base_flags[i], base_flags[i] & ~active)
+    density[i] = wp.where(mode == 1, 0.0, base_density[i])
+    transfer_velocity[i] = wp.where(mode == 1, wp.vec3(0.0), velocities[i])
+    transfer_gradient[i] = wp.where(mode == 1, wp.mat33(0.0), gradients[i])
+
+
+@wp.kernel(enable_backward=False)
 def _initialize_activity(flags: wp.array[int], activity: wp.array[int]):
     i = wp.tid()
     activity[i] = wp.where((flags[i] & newton.ParticleFlags.ACTIVE) != 0, 2, 0)
@@ -715,6 +741,7 @@ class ParticleActivity:
         support_radius=1,
     ):
         self.model = model
+        self.regions = None
         self.voxel_size = voxel_size
         self.patch_size = patch_size
         self.support_radius = support_radius
@@ -803,6 +830,40 @@ class ParticleActivity:
         self._update_mesh_bounds(0.0, initialize=True)
         self.previous_lower.assign(self.lower)
         self.previous_upper.assign(self.upper)
+
+    def refresh_material(self, mpm_model):
+        """Refresh material eligibility in place without waking unrelated worlds or replacing graph inputs.
+
+        The next activity update recomputes effective flags/density before grid assembly.
+        Geometry and collider changes still use the full refresh path.
+        """
+        self.mpm_model = mpm_model
+        self.base_flags.assign(mpm_model.particle_flags)
+        self.base_material_flags.assign(mpm_model.material_particle_flags)
+        self.base_density.assign(mpm_model.particle_density)
+        self.planning_countdown.zero_()
+
+    def apply_activity(self, state):
+        """Reapply restored sleep/support labels using current material properties."""
+        wp.launch(
+            _apply_activity_state,
+            dim=self.model.particle_count,
+            inputs=[
+                self.activity,
+                self.base_flags,
+                self.base_material_flags,
+                self.base_density,
+                state.particle_qd,
+                state.mpm.particle_qd_grad,
+                self.mpm_model.particle_flags,
+                self.mpm_model.material_particle_flags,
+                self.mpm_model.particle_density,
+                self.advect_flags,
+                self.transfer_velocity,
+                self.transfer_gradient,
+            ],
+            device=self.model.device,
+        )
 
     def restore(self):
         """Restore the caller's eligible transfer and material properties."""
@@ -979,6 +1040,8 @@ class ParticleActivity:
                 ],
                 device=device,
             )
+        if self.regions is not None and self.regions.keep_material_motion:
+            wp.copy(self.regions.material_requests, table.requested)
         self.collider_fallback_count.zero_()
         collider_count = collider.collider_mesh.shape[0]
         wp.launch(
@@ -1021,6 +1084,8 @@ class ParticleActivity:
             inputs=[table, collider, self.wake_lower, self.wake_upper, self.wake_mode, self.collider_fallback_count],
             device=device,
         )
+        if self.regions is not None:
+            self.regions.filter(table)
         wp.launch(
             _dilate_patches,
             dim=count,
