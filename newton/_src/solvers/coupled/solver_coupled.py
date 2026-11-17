@@ -2654,6 +2654,16 @@ class SolverCoupled(SolverBase, CouplingInterface):
             elif hasattr(self.model, f"{attribute.name}_start"):
                 setattr(view, f"{attribute.name}_start", self._world_start_array(world, count))
 
+    def _indices_are_identity(self, indices: Sequence[int]) -> bool:
+        """Whether ``indices`` selects every row in order; memoized because projections reuse one index list per frequency."""
+        memo = self.__dict__.setdefault("_identity_memo", {})
+        hit = memo.get(id(indices))
+        if hit is not None and hit[0] is indices and hit[1] == len(indices):
+            return hit[2]
+        result = bool(np.array_equal(np.asarray(indices), np.arange(len(indices))))
+        memo[id(indices)] = (indices, len(indices), result)
+        return result
+
     def _select_attribute_value(
         self,
         value,
@@ -2674,7 +2684,7 @@ class SolverCoupled(SolverBase, CouplingInterface):
                 )
             if value.shape[0] <= max(indices):
                 return None
-            if len(indices) == value.shape[0] and all(index == local for local, index in enumerate(indices)):
+            if len(indices) == value.shape[0] and self._indices_are_identity(indices):
                 return wp.clone(value)
             mapping = wp.array(indices, dtype=int, device=value.device)
             shape = (len(indices), *value.shape[1:])
