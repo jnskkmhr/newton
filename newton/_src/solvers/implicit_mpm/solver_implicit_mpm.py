@@ -1285,13 +1285,6 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         """Maximum number of iterations for the rheology solver."""
         tolerance: float = 1.0e-4
         """Tolerance for the rheology solver."""
-        rheology_check_interval: int = 5
-        """Iterations of a captured rheology solve between convergence checks.
-
-        Each check is a conditional graph launch, which leaves the GPU idle for about a millisecond. When solves
-        normally run to ``max_iterations``, setting this to ``max_iterations`` checks once and runs the same
-        iterations without the extra launches. A solve that would have converged earlier then runs on to the check.
-        """
         carry_residual_strain: Literal["none", "unconverged", "sampled"] = "none"
         """Residual strain carried into the elastic strain, beyond the strain consistent with the solved stress.
 
@@ -2013,7 +2006,6 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         self._particle_working_set = None
 
         self.max_iterations = config.max_iterations
-        self.rheology_check_interval = int(config.rheology_check_interval)
         self.tolerance = float(config.tolerance)
         if config.carry_residual_strain not in ("none", "unconverged", "sampled"):
             raise ValueError(f"Invalid carry_residual_strain: {config.carry_residual_strain}")
@@ -5268,7 +5260,6 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
                 temporary_store=self.temporary_store,
                 use_graph=self._use_cuda_graph,
                 verbose=self.verbose,
-                check_interval=self.rheology_check_interval,
             )
 
         for temporary in contact_temporaries:

@@ -1732,10 +1732,10 @@ def _run_solver_loop(
     use_graph: bool,
     verbose: bool,
     temporary_store: fem.TemporaryStore,
-    solve_granularity: int = 5,
 ):
     solve_graph = None
     if use_graph:
+        solve_granularity = 5
 
         iteration_and_condition = fem.borrow_temporary(temporary_store, shape=(2,), dtype=int)
         iteration_and_condition.fill_(1)
@@ -1847,7 +1847,6 @@ def solve_rheology(
     temporary_store: fem.TemporaryStore | None = None,
     use_graph: bool = True,
     verbose: bool | None = None,
-    check_interval: int = 5,
 ):
     """Solve coupled plasticity and collider contact to compute grid velocities.
 
@@ -2007,7 +2006,6 @@ def solve_rheology(
         use_graph,
         verbose,
         temporary_store,
-        solve_granularity=check_interval,
     )
 
     # release temporary storage
