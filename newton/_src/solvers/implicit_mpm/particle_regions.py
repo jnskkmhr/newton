@@ -19,10 +19,13 @@ def _filter_region_requests(
     offsets: wp.array[wp.vec3],
     material_requests: wp.array[int],
     keep_material_motion: bool,
+    awake_inside: bool,
 ):
     slot = wp.tid()
     particle = table.slots[slot]
-    if particle < 0 or table.requested[slot] == 0:
+    if particle < 0:
+        return
+    if not awake_inside and table.requested[slot] == 0:
         return
     # Particle-driven requests include force, motion, changing stress, and quiet grace periods.
     # Preserve their swept neighbor requests too, before adding the ordinary support halo.
@@ -44,12 +47,25 @@ def _filter_region_requests(
     if not allowed:
         table.requested[slot] = 0
         table.urgent[slot] = 0
+    elif awake_inside:
+        table.requested[slot] = 1
 
 
 class ParticleRegions:
     """Own fixed region descriptors; read live body poses on every captured activity update."""
 
-    def __init__(self, model, activity, body_q, body_world, body_indices, half_extents, offsets, keep_material_motion):
+    def __init__(
+        self,
+        model,
+        activity,
+        body_q,
+        body_world,
+        body_indices,
+        half_extents,
+        offsets,
+        keep_material_motion,
+        awake_inside=False,
+    ):
         if body_q.dtype != wp.transform or body_world.dtype != wp.int32:
             raise ValueError("Region poses must be transform arrays and world IDs must be int32 arrays.")
         if body_q.ndim != 1 or body_world.shape != body_q.shape:
@@ -75,6 +91,7 @@ class ParticleRegions:
         self.half_extents = wp.array(extents, dtype=wp.vec3, device=model.device)
         self.offsets = wp.array(offsets, dtype=wp.vec3, device=model.device)
         self.keep_material_motion = keep_material_motion
+        self.awake_inside = awake_inside
         self.material_requests = wp.empty_like(activity.table.requested)
 
     def filter(self, table):
@@ -90,6 +107,7 @@ class ParticleRegions:
                 self.offsets,
                 self.material_requests,
                 self.keep_material_motion,
+                self.awake_inside,
             ],
             device=self.body_q.device,
         )

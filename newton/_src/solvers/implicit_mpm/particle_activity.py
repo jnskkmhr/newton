@@ -717,6 +717,49 @@ def _reset_activity(
     activity[i] = wp.where((base_flags[i] & newton.ParticleFlags.ACTIVE) != 0, 2, 0)
 
 
+@wp.kernel(enable_backward=False)
+def _reset_particle_history(
+    selected: wp.array[int],
+    base_flags: wp.array[int],
+    stress: wp.array[wp.mat33],
+    quiet_time: wp.array[float],
+    previous_stress: wp.array[wp.mat33],
+    stress_filter_valid: wp.array[int],
+    stress_elapsed: wp.array[float],
+    activity: wp.array[int],
+):
+    i = wp.tid()
+    if selected[i] == 0:
+        return
+    quiet_time[i] = 0.0
+    previous_stress[i] = stress[i]
+    stress_filter_valid[i] = wp.where(wp.isfinite(wp.ddot(stress[i], stress[i])), 1, 0)
+    stress_elapsed[i] = 0.0
+    activity[i] = wp.where((base_flags[i] & newton.ParticleFlags.ACTIVE) != 0, 2, 0)
+
+
+@wp.kernel(enable_backward=False)
+def _settle_particle_history(
+    selected: wp.array[int],
+    sleep_time: float,
+    base_flags: wp.array[int],
+    stress: wp.array[wp.mat33],
+    quiet_time: wp.array[float],
+    previous_stress: wp.array[wp.mat33],
+    stress_filter_valid: wp.array[int],
+    stress_elapsed: wp.array[float],
+    activity: wp.array[int],
+):
+    i = wp.tid()
+    if selected[i] == 0:
+        return
+    quiet_time[i] = sleep_time
+    previous_stress[i] = stress[i]
+    stress_filter_valid[i] = wp.where(wp.isfinite(wp.ddot(stress[i], stress[i])), 1, 0)
+    stress_elapsed[i] = 0.0
+    activity[i] = wp.where((base_flags[i] & newton.ParticleFlags.ACTIVE) != 0, 2, 0)
+
+
 class ParticleActivity:
     """Own solver-local sleep masks, sparse patch requests, and quiet timers."""
 
@@ -900,6 +943,62 @@ class ParticleActivity:
             self.planning_countdown.zero_()
             self.planning_elapsed.zero_()
         self._patch_hash_valid.zero_()
+
+    def reset_particles(self, state, selected):
+        """Wake the selected particles and restart their quiet grace periods.
+
+        Use after particles were given a new position and material state. The next update plans
+        activity again and recomputes their effective flags and density.
+
+        Args:
+            state: State holding the particles' current stress.
+            selected: Per-particle selection; nonzero entries are reset.
+        """
+        wp.launch(
+            _reset_particle_history,
+            dim=self.model.particle_count,
+            inputs=[
+                selected,
+                self.base_flags,
+                state.mpm.particle_stress,
+                self.quiet_time,
+                self.previous_stress,
+                self.stress_filter_valid,
+                self.stress_elapsed,
+                self.activity,
+            ],
+            device=self.model.device,
+        )
+        self.planning_countdown.zero_()
+
+    def settle_particles(self, state, selected):
+        """Give the selected particles the history of sand that is already at rest.
+
+        Use after particles were given a position and material state known to be settled. They get no
+        quiet grace period: the next update lets them sleep unless motion, a stress change or a
+        collider keeps their patch awake.
+
+        Args:
+            state: State holding the particles' current stress.
+            selected: Per-particle selection; nonzero entries are settled.
+        """
+        wp.launch(
+            _settle_particle_history,
+            dim=self.model.particle_count,
+            inputs=[
+                selected,
+                self.sleep_time,
+                self.base_flags,
+                state.mpm.particle_stress,
+                self.quiet_time,
+                self.previous_stress,
+                self.stress_filter_valid,
+                self.stress_elapsed,
+                self.activity,
+            ],
+            device=self.model.device,
+        )
+        self.planning_countdown.zero_()
 
     def _rebuild_patch_table(self):
         self.table.slots.fill_(-1)

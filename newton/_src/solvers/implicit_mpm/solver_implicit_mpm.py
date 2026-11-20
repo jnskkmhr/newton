@@ -2004,6 +2004,7 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         self._mpm_model = ImplicitMPMModel(model, config)
         self._particle_activity = None
         self._particle_working_set = None
+        self._particle_streaming = None
 
         self.max_iterations = config.max_iterations
         self.tolerance = float(config.tolerance)
@@ -2300,6 +2301,7 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
         body_q: wp.array[wp.transform] | None = None,
         body_world: wp.array[wp.int32] | None = None,
         keep_material_motion: bool = True,
+        awake_inside: bool = False,
     ) -> None:
         """Restrict collider-driven activity to the union of body-following world-axis-aligned boxes.
 
@@ -2320,6 +2322,8 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
             keep_material_motion: Preserve particle-driven activity outside the boxes, including
                 forces, changing stress, quiet grace periods, and swept motion. False forcibly
                 freezes distant material and changes the physical approximation.
+            awake_inside: Keep every particle inside the boxes awake, instead of selecting activity
+                inside them from particle and collider motion.
 
         Raises:
             RuntimeError: Sleeping is disabled or configuration is attempted during capture.
@@ -2350,8 +2354,116 @@ class SolverImplicitMPM(SolverBase, CouplingInterface):
             half_extents,
             offsets,
             keep_material_motion,
+            awake_inside,
         )
         self._particle_activity.planning_countdown.zero_()
+
+    @property
+    def particle_streaming(self):
+        """Streaming particle pool configured by :meth:`set_particle_streaming`, or ``None``.
+
+        .. experimental::
+
+            Runtime-only pool management. The interface may change.
+        """
+        return self._particle_streaming
+
+    def set_particle_streaming(
+        self,
+        state: newton.State,
+        *,
+        body_indices: Sequence[int] | None,
+        size: Sequence[float] = (1.0, 1.0),
+        margin: float = 0.2,
+        tile_size: float = 0.2,
+        surface_mesh: wp.Mesh | None = None,
+        world_origins: Any = None,
+        spawn_heights: Any = None,
+        model: newton.Model | None = None,
+        cache: dict[str, Any] | None = None,
+    ):
+        """Keep a fixed pool of particles under one anchor body per world.
+
+        The pool covers the dynamic window of ``size`` plus a kinematic ring of width ``margin``.
+        As an anchor moves, the pool follows it in steps of ``tile_size``; the strip left behind is
+        placed at the leading edge in the default material state, on ``surface_mesh``. Particles are
+        never created or destroyed, so the model must already hold the particles of every pool.
+
+        The returned object does the per-step work. Call its ``update(state)`` before each step with
+        the state holding the anchor poses and particle kinematics, and ``post_step(state)`` after it.
+
+        Args:
+            state: This solver's current input state. For a coupled solver use the entry state.
+            body_indices: One anchor body row per world, indexing ``body_q`` of the states later
+                passed to ``update``. None disables streaming.
+            size: XY size [m] of the dynamic window.
+            margin: Width [m] of the kinematic ring around the window.
+            tile_size: Step [m] in which the window moves. Must not exceed ``margin``.
+            surface_mesh: Surface on which recycled particles are placed. Required when enabling.
+            world_origins: Per-world origins [m], shape ``(world_count, 3)``. Their XY phases the tile grid.
+            spawn_heights: Per-world Z [m] of the surface the particles were authored on, shape
+                ``(world_count,)``. Particle Z offsets are measured from it.
+            model: Model whose particle arrays are stepped. Defaults to this solver's model; for a
+                coupled solver pass the parent model.
+            cache: None keeps a fixed pool whose reused particles get the default material state.
+                Otherwise the settings of a tile cache, which saves the tiles a pool leaves and restores
+                them on return: ``depth`` [m] of the particle layer, ``tile_template`` (positions [m] of
+                one tile's particles, Z relative to the surface), ``tile_radius`` [m],
+                ``max_cached_particles`` and ``max_visited_tiles`` per world, and ``settle_time`` [s],
+                ``settle_speed`` [m/s] and ``settle_dt`` [s] of the one-time template settling run.
+                The model must hold the spare slots, and ``body_indices`` may list several anchors per
+                world as a ``(world_count, anchors)`` array padded with -1.
+
+        Returns:
+            The :class:`ParticleStreaming` or :class:`CachedParticleStreaming` pool, or None when disabled.
+
+        Raises:
+            RuntimeError: Configuration is attempted during capture.
+            ValueError: A required input is missing or inconsistent with the model.
+
+        .. experimental::
+
+            Runtime-only pool management. Configure before graph capture; changing it requires recapture.
+        """
+        if self.model.device.is_capturing:
+            raise RuntimeError("Configure particle streaming outside CUDA graph capture.")
+        if body_indices is None:
+            self._particle_streaming = None
+            return None
+        if surface_mesh is None or world_origins is None:
+            raise ValueError("Provide the surface mesh and world origins for particle streaming.")
+        from .particle_streaming import CachedParticleStreaming, ParticleStreaming  # noqa: PLC0415
+
+        if cache is not None:
+            self._particle_streaming = CachedParticleStreaming(
+                self,
+                state,
+                model=self.model if model is None else model,
+                body_indices=body_indices,
+                size=size,
+                margin=margin,
+                tile_size=tile_size,
+                surface_mesh=surface_mesh,
+                world_origins=world_origins,
+                **cache,
+            )
+            return self._particle_streaming
+        if spawn_heights is None:
+            raise ValueError("Provide the spawn heights for a particle pool without a tile cache.")
+
+        self._particle_streaming = ParticleStreaming(
+            self,
+            state,
+            model=self.model if model is None else model,
+            body_indices=body_indices,
+            size=size,
+            margin=margin,
+            tile_size=tile_size,
+            surface_mesh=surface_mesh,
+            world_origins=world_origins,
+            spawn_heights=spawn_heights,
+        )
+        return self._particle_streaming
 
     def update_particle_activity(self, state: newton.State, dt: float) -> None:
         """Classify particles without advancing their positions or integrating MPM.
