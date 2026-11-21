@@ -440,6 +440,7 @@ class CachedParticleStreaming:
     tiles it leaves are saved to a per-world record store and their simulation slots are freed. Tiles
     it enters are restored from that store, or generated from a tile template settled once at
     construction if they were never visited. Spare simulation slots hold no sand until a tile needs them.
+    A world that holds no particles has no pool.
     With particle sleeping enabled, sand entering the dynamic window arrives at rest and may sleep at once;
     sand that stays keeps its sleep history.
 
@@ -502,6 +503,8 @@ class CachedParticleStreaming:
         particle_world = model.particle_world.numpy()
         if np.any(particle_world < 0) or np.any(particle_world >= world_count):
             raise ValueError("Streamed particles must belong to valid worlds.")
+        # A world without particles has no pool: its anchors load no tiles.
+        self.body_counts[np.bincount(particle_world, minlength=world_count) == 0] = 0
         origins = np.asarray(world_origins, dtype=np.float32)
         if origins.shape != (world_count, 3):
             raise ValueError("World origins must provide one entry per world.")

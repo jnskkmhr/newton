@@ -297,10 +297,18 @@ class GpuParticleStateCache:
         self.worlds = patch.model.particle_world.numpy()
         self.world_count = patch.model.world_count
         slots = [np.flatnonzero(self.worlds == world) for world in range(self.world_count)]
-        if len({len(world_slots) for world_slots in slots}) != 1:
-            raise ValueError("The GPU particle cache needs the same number of simulation slots in every environment")
-        self.slot_capacity = len(slots[0])
-        self.slot_table = wp.array(np.concatenate(slots), dtype=int, device=self.device)
+        capacities = {len(world_slots) for world_slots in slots} - {0}
+        if len(capacities) != 1:
+            raise ValueError(
+                "The GPU particle cache needs the same number of simulation slots in every environment that holds"
+                " particles"
+            )
+        self.slot_capacity = capacities.pop()
+        # Environments without particles keep an empty row; they have no pool, so nothing is allocated from it.
+        slot_table = np.full((self.world_count, self.slot_capacity), -1, dtype=np.int64)
+        for world, world_slots in enumerate(slots):
+            slot_table[world, : len(world_slots)] = world_slots
+        self.slot_table = wp.array(slot_table.ravel(), dtype=int, device=self.device)
         self.record_capacity = self.cfg.max_cached_particles_per_env
         self.max_visited = self.cfg.max_visited_tiles_per_env
         self.table_capacity = 1 << max(4, (2 * self.max_visited - 1).bit_length())
@@ -338,7 +346,7 @@ class GpuParticleStateCache:
         self.record_free = wp.zeros(self.record_capacity * self.world_count, dtype=int, device=self.device)
         self.slot_bump = wp.zeros(self.world_count, dtype=int, device=self.device)
         self.slot_free_count = wp.zeros(self.world_count, dtype=int, device=self.device)
-        self.slot_free = wp.zeros(count, dtype=int, device=self.device)
+        self.slot_free = wp.zeros(self.slot_capacity * self.world_count, dtype=int, device=self.device)
         # per-update bookkeeping
         self.tile_begins = wp.empty(patch.bodies.shape, dtype=wp.vec2i, device=self.device)
         self.prev_begins = wp.full(patch.bodies.shape, 1_000_000_000, dtype=wp.vec2i, device=self.device)
