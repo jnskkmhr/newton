@@ -768,6 +768,32 @@ class TestSolverCoupledContactsAndMPM(unittest.TestCase):
         self.assertTrue(mpm._mpm_model.has_viscosity)
         np.testing.assert_allclose(mpm._mpm_model.particle_density.numpy(), [0.0, 2000.0, 375.0], rtol=1.0e-6)
 
+    def test_model_properties_notifications_do_not_accumulate_index_lists(self):
+        """Repeated material notifications reuse the memoized identity check instead of adding entries."""
+        builder = newton.ModelBuilder(gravity=(0.0, 0.0, 0.0))
+        SolverImplicitMPM.register_custom_attributes(builder)
+        builder.begin_world()
+        for x in range(3):
+            builder.add_particle(pos=(float(x), 0.0, 0.0), vel=(0.0, 0.0, 0.0), mass=1.0, radius=0.05)
+        builder.end_world()
+        model = builder.finalize(device="cpu")
+        config = SolverImplicitMPM.Config(grid_type="fixed", grid_padding=1, max_iterations=1)
+        # The entry owns every particle in order, so each projected attribute takes the identity path.
+        coupled = SolverCoupled(
+            model,
+            entries=[
+                SolverCoupled.Entry(
+                    name="sand", solver=lambda view: SolverImplicitMPM(view, config), particles=[0, 1, 2], in_place=True
+                ),
+            ],
+        )
+        coupled.notify_model_changed(newton.ModelFlags.MODEL_PROPERTIES)
+        memo_size = len(coupled._identity_memo)
+        self.assertGreater(memo_size, 0)
+        for _ in range(5):
+            coupled.notify_model_changed(newton.ModelFlags.MODEL_PROPERTIES)
+        self.assertEqual(len(coupled._identity_memo), memo_size)
+
     def test_graph_capture_setup_stays_solver_specific(self):
         """Verify coupled solvers do not expose a generic graph protocol."""
         for name in ("supports_graph_capture", "prepare_graph_capture", "check_status"):

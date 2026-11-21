@@ -2391,7 +2391,9 @@ class SolverCoupled(SolverBase, CouplingInterface):
     @staticmethod
     def _expanded_row_indices(rows: Sequence[int], row_width: int) -> list[int]:
         if row_width == 1:
-            return list(rows)
+            # Callers only read the result. Returning the stored list keeps its identity, which the identity memo
+            # keys on; a copy per call would add one entry per projected attribute on every model change.
+            return rows if isinstance(rows, list) else list(rows)
         return [int(row) * row_width + component for row in rows for component in range(row_width)]
 
     @staticmethod
@@ -2661,6 +2663,9 @@ class SolverCoupled(SolverBase, CouplingInterface):
         if hit is not None and hit[0] is indices and hit[1] == len(indices):
             return hit[2]
         result = bool(np.array_equal(np.asarray(indices), np.arange(len(indices))))
+        if len(memo) >= 256:
+            # Entries hold their index list; lists built per call must not accumulate.
+            memo.clear()
         memo[id(indices)] = (indices, len(indices), result)
         return result
 
