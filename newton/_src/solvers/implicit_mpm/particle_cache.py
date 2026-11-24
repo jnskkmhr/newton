@@ -327,7 +327,9 @@ class GpuParticleStateCache:
         regions = patch.bodies.shape[1]
         self.body_counts = wp.array(patch.body_counts, dtype=int, device=self.device)
         # particle state
-        self.saved = allocate_particle_state(self.record_capacity * self.world_count, self.device)
+        # Only worlds that hold particles save records, so the record store ends at the last such world.
+        record_count = self.record_capacity * (int(self.worlds.max()) + 1 if len(self.worlds) else 0)
+        self.saved = allocate_particle_state(record_count, self.device)
         self.frozen = allocate_particle_state(count, self.device)
         self.layers = wp.zeros(count, dtype=int, device=self.device)
         self.next_layers = wp.empty_like(self.layers)
@@ -340,10 +342,10 @@ class GpuParticleStateCache:
         self.table_revisions = wp.zeros(shape, dtype=int, device=self.device)
         self.table_loaded_once = wp.zeros(shape, dtype=int, device=self.device)
         self.visited_count = wp.zeros(self.world_count, dtype=int, device=self.device)
-        self.record_next = wp.full(self.record_capacity * self.world_count, -1, dtype=int, device=self.device)
+        self.record_next = wp.full(record_count, -1, dtype=int, device=self.device)
         self.record_bump = wp.zeros(self.world_count, dtype=int, device=self.device)
         self.record_free_count = wp.zeros(self.world_count, dtype=int, device=self.device)
-        self.record_free = wp.zeros(self.record_capacity * self.world_count, dtype=int, device=self.device)
+        self.record_free = wp.zeros(record_count, dtype=int, device=self.device)
         self.slot_bump = wp.zeros(self.world_count, dtype=int, device=self.device)
         self.slot_free_count = wp.zeros(self.world_count, dtype=int, device=self.device)
         self.slot_free = wp.zeros(self.slot_capacity * self.world_count, dtype=int, device=self.device)
